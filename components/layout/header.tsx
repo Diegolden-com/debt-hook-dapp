@@ -5,14 +5,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Wallet, Shield, Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
+import { Wallet, Shield } from "lucide-react"
 
 export function Header() {
   const pathname = usePathname()
   const [isConnected, setIsConnected] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
-  const { theme, setTheme } = useTheme()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -22,19 +20,11 @@ export function Header() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">DebtHook</span>
+          <span className="text-xl font-bold">Humane Banque</span>
         </Link>
 
-        {/* Desktop Navigation - Hidden on small screens */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link
-            href="/market"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              pathname === "/market" ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            Market
-          </Link>
           <Link
             href="/dashboard"
             className={`text-sm font-medium transition-colors hover:text-primary ${
@@ -43,22 +33,34 @@ export function Header() {
           >
             Dashboard
           </Link>
+          <Link
+            href="/lend"
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              pathname === "/lend" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            Lend
+          </Link>
+          <Link
+            href="/borrow"
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              pathname === "/borrow" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            Borrow
+          </Link>
+          <Link
+            href="/portfolio"
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              pathname === "/portfolio" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            Portfolio
+          </Link>
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center space-x-2">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="h-8 w-8 px-0"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-
+        <div className="flex items-center space-x-2 md:space-x-4">
           {/* Verification Status - Hidden on small screens */}
           {isConnected && (
             <Badge variant={isVerified ? "default" : "secondary"} className="hidden sm:flex">

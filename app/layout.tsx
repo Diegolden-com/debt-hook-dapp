@@ -8,8 +8,8 @@ import { BottomNavigation } from "@/components/layout/bottom-navigation"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "DebtHook - Protocolo de Préstamos DeFi",
-  description: "Protocolo descentralizado de préstamos con colateral ETH y libro de órdenes",
+  title: "Humane Banque - Secure Fixed-Term DeFi Lending",
+  description: "Secure Fixed-Term DeFi Lending for Verified Humans",
     generator: 'v0.dev'
 }
 
@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="pb-16 md:pb-0">{children}</div>
           <BottomNavigation />
         </ThemeProvider>
