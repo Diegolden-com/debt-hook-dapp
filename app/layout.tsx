@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { BottomNavigation } from "@/components/layout/bottom-navigation"
+import PrivyProvider from "@/components/privy-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,10 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="pb-16 md:pb-0">{children}</div>
-          <BottomNavigation />
-        </ThemeProvider>
+        <PrivyProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <div className="pb-16 md:pb-0">{children}</div>
+            <BottomNavigation />
+          </ThemeProvider>
+        </PrivyProvider>
       </body>
     </html>
   )

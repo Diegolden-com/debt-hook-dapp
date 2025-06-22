@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, Info, AlertTriangle, Wallet, DollarSign, Zap } from "lucide-react" // Added Zap icon
 import { useEthPrice } from "@/hooks/use-eth-price"
+import { usePrivyWallet } from "@/hooks/use-privy-wallet"
+import { usePrivy } from "@privy-io/react-auth"
 
 interface TradingPanelProps {
   bestBid: number
@@ -22,6 +24,8 @@ interface TradingPanelProps {
 export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: TradingPanelProps) {
   const [activeTab, setActiveTab] = useState("lend")
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
+  const { address, isConnected } = usePrivyWallet()
+  const { login } = usePrivy()
 
   // Lending form state
   const [lendingForm, setLendingForm] = useState({
@@ -56,13 +60,18 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
   }
 
   const handleLendingSubmit = async () => {
+    if (!isConnected || !address) {
+      login()
+      return
+    }
+    
     try {
       const orderData = {
         type: "bid" as const,
         rate: Number.parseFloat(lendingForm.interestRate),
         amount: Number.parseInt(lendingForm.usdcAmount),
         term: Number.parseInt(lendingForm.term),
-        lender: "0x1234567890123456789012345678901234567890", // Replace with actual wallet
+        lender: address,
         max_ltv: Number.parseInt(lendingForm.maxLtv),
         status: "active" as const,
       }
@@ -74,13 +83,18 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
   }
 
   const handleBorrowingSubmit = async () => {
+    if (!isConnected || !address) {
+      login()
+      return
+    }
+    
     try {
       const orderData = {
         type: "ask" as const,
         rate: Number.parseFloat(borrowingForm.maxInterestRate),
         amount: Number.parseInt(borrowingForm.usdcAmount),
         term: Number.parseInt(borrowingForm.term),
-        borrower: "0x1234567890123456789012345678901234567890", // Replace with actual wallet
+        borrower: address,
         status: "active" as const,
       }
       await onCreateOrder(orderData)
@@ -258,7 +272,7 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
 
               <Button onClick={handleLendingSubmit} className="w-full" disabled={!isLendingFormValid || isPriceLoading}>
                 <DollarSign className="mr-2 h-4 w-4" />
-                Create Lending Offer
+                {isConnected ? "Create Lending Offer" : "Connect Wallet"}
               </Button>
             </div>
           </TabsContent>
@@ -419,7 +433,7 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
                 variant="outline"
               >
                 <Wallet className="mr-2 h-4 w-4" />
-                Create Borrowing Request
+                {isConnected ? "Create Borrowing Request" : "Connect Wallet"}
               </Button>
             </div>
           </TabsContent>

@@ -1,18 +1,19 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Wallet, Shield, Moon, Sun } from "lucide-react"
+import { Shield, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
+import { ConnectWalletButton } from "@/components/connect-wallet-button"
+import { usePrivy } from "@privy-io/react-auth"
 
 export function Header() {
   const pathname = usePathname()
-  const [isConnected, setIsConnected] = useState(false)
-  const [isVerified, setIsVerified] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { authenticated, user } = usePrivy()
+  const isVerified = authenticated && user?.hasAcceptedTerms
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,7 +61,7 @@ export function Header() {
           </Button>
 
           {/* Verification Status - Hidden on small screens */}
-          {isConnected && (
+          {authenticated && (
             <Badge variant={isVerified ? "default" : "secondary"} className="hidden sm:flex">
               <Shield className="h-3 w-3 mr-1" />
               {isVerified ? "Verified" : "Unverified"}
@@ -68,16 +69,7 @@ export function Header() {
           )}
 
           {/* Connect Wallet */}
-          <Button
-            onClick={() => setIsConnected(!isConnected)}
-            variant={isConnected ? "outline" : "default"}
-            size="sm"
-            className="text-xs sm:text-sm"
-          >
-            <Wallet className="h-4 w-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">{isConnected ? "0x1234...5678" : "Connect Wallet"}</span>
-            <span className="sm:hidden">{isConnected ? "Connected" : "Connect"}</span>
-          </Button>
+          <ConnectWalletButton />
         </div>
       </div>
     </header>
