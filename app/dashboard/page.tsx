@@ -28,11 +28,24 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { useEthPrice } from "@/hooks/use-eth-price"
+import { useUserPositions } from "@/lib/hooks/contracts/useUserPositions"
+import { useDebtHook } from "@/lib/hooks/contracts"
+import { formatUnits, formatEther } from "viem"
+import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
+import { usePrivyWallet } from "@/hooks/use-privy-wallet"
+import { PositionsTab } from "@/components/dashboard/PositionsTab"
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("orders")
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [activeOrders, setActiveOrders] = useState<any[]>([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+  
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
+  const { address } = usePrivyWallet()
+  const { borrowerPositions, lenderPositions, stats, isLoading: isLoadingPositions } = useUserPositions()
+  const { repay, liquidate, isRepaying, isLiquidating } = useDebtHook()
 
   // Update time every second for real-time countdown
   useEffect(() => {
@@ -42,226 +55,110 @@ export default function DashboardPage() {
     return () => clearInterval(timer)
   }, [])
 
-  // Active Orders (EIP-712 signed, waiting for match)
-  const activeOrders = {
-    lending: [
-      {
-        id: "LO001",
-        type: "lending",
-        usdcAmount: 20000,
-        interestRate: 9.2,
-        term: 90,
-        maxLtv: 75,
-        status: "active",
-        createdAt: "2024-03-15T08:30:00Z",
-        expiresAt: "2024-04-15T08:30:00Z",
-        signature: "0x1234...abcd",
-        views: 12,
-        partialFills: 0,
-      },
-      {
-        id: "LO002",
-        type: "lending",
-        usdcAmount: 8000,
-        interestRate: 11.5,
-        term: 30,
-        maxLtv: 80,
-        status: "active",
-        createdAt: "2024-03-14T16:20:00Z",
-        expiresAt: "2024-04-14T16:20:00Z",
-        signature: "0x5678...efgh",
-        views: 8,
-        partialFills: 0,
-      },
-      {
-        id: "LO003",
-        type: "lending",
-        usdcAmount: 12000,
-        interestRate: 14.8,
-        term: 180,
-        maxLtv: 70,
-        status: "paused",
-        createdAt: "2024-03-13T12:10:00Z",
-        expiresAt: "2024-05-13T12:10:00Z",
-        signature: "0x9abc...ijkl",
-        views: 25,
-        partialFills: 1,
-      },
-    ],
-    borrowing: [
-      {
-        id: "BO001",
-        type: "borrowing",
-        usdcAmount: 15000,
-        maxInterestRate: 10.5,
-        term: 60,
-        collateralEth: 6.2,
-        status: "active",
-        createdAt: "2024-03-16T10:15:00Z",
-        expiresAt: "2024-04-16T10:15:00Z",
-        signature: "0xdef0...mnop",
-        views: 18,
-        offers: 3,
-      },
-    ],
+  // Fetch active orders from Supabase
+  useEffect(() => {
+    async function fetchActiveOrders() {
+      if (!address) {
+        setActiveOrders([])
+        return
+      }
+
+      setIsLoadingOrders(true)
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .or(`lender.eq.${address},borrower.eq.${address}`)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        setActiveOrders(data || [])
+      } catch (err) {
+        console.error('Error fetching active orders:', err)
+      } finally {
+        setIsLoadingOrders(false)
+      }
+    }
+
+    fetchActiveOrders()
+  }, [address])
+
+  // Split active orders by type
+  const lendingOrders = activeOrders.filter(order => order.order_type === 'lending' && order.lender === address)
+  const borrowingOrders = activeOrders.filter(order => order.order_type === 'borrowing' && order.borrower === address)
+
+  // Calculate grace period (1 day after maturity)
+  const GRACE_PERIOD = 24 * 60 * 60 // 1 day in seconds
+
+  // Handle loan repayment
+  const handleRepay = async (loanId: bigint, amount: bigint) => {
+    await repay(loanId, amount)
+    // Refresh positions after repayment
+    if (stats) {
+      window.location.reload()
+    }
   }
 
-  // Matched Positions (Active loans) - Updated with realistic maturity dates
-  const matchedPositions = {
-    asLender: [
-      {
-        id: "ML001",
-        orderId: "LO004",
-        principal: 15000,
-        currentValue: 15234.5,
-        borrower: "0x5555...1111",
-        borrowerCollateral: 5.5,
-        collateralValueUsd: isPriceLoading ? 17600 : 5.5 * ethPrice,
-        interestRate: 15.8,
-        term: 180,
-        startDate: "2024-02-20T11:45:00Z",
-        maturityDate: "2024-05-20T11:45:00Z",
-        gracePeriodEnd: "2024-05-21T11:45:00Z", // 1 day after maturity
-        healthRatio: isPriceLoading ? 92.1 : ((5.5 * ethPrice) / 15234.5) * 100,
-        status: "active",
-        lastHealthCheck: "2024-03-20T14:30:00Z",
-      },
-      {
-        id: "ML002",
-        orderId: "LO005",
-        principal: 8000,
-        currentValue: 8089.2,
-        borrower: "0x7777...8888",
-        borrowerCollateral: 3.1,
-        collateralValueUsd: isPriceLoading ? 9920 : 3.1 * ethPrice,
-        interestRate: 9.5,
-        term: 30,
-        startDate: "2024-03-26T14:20:00Z",
-        maturityDate: "2024-04-25T14:20:00Z",
-        gracePeriodEnd: "2024-04-26T14:20:00Z", // 1 day after maturity
-        healthRatio: isPriceLoading ? 88.7 : ((3.1 * ethPrice) / 8089.2) * 100,
-        status: "at_risk",
-        lastHealthCheck: "2024-03-20T14:25:00Z",
-      },
-    ],
-    asBorrower: [
-      {
-        id: "MB001",
-        orderId: "BO002",
-        principal: 10000,
-        currentDebt: 10156.8,
-        lender: "0x1234...5678",
-        collateralEth: 4.2,
-        collateralValueUsd: isPriceLoading ? 13440 : 4.2 * ethPrice,
-        interestRate: 8.5,
-        term: 30,
-        startDate: "2024-03-02T10:30:00Z",
-        maturityDate: "2024-04-01T10:30:00Z",
-        gracePeriodEnd: "2024-04-02T10:30:00Z", // 1 day after maturity
-        liquidationPrice: isPriceLoading ? 2416 : 10156.8 / 4.2,
-        healthRatio: isPriceLoading ? 85.2 : ((4.2 * ethPrice) / 10156.8) * 100,
-        status: "liquidated", // Past grace period
-        lastHealthCheck: "2024-03-20T14:32:00Z",
-      },
-      {
-        id: "MB002",
-        orderId: "BO003",
-        principal: 25000,
-        currentDebt: 25892.3,
-        lender: "0x9876...4321",
-        collateralEth: 9.8,
-        collateralValueUsd: isPriceLoading ? 31360 : 9.8 * ethPrice,
-        interestRate: 12.2,
-        term: 90,
-        startDate: "2024-02-15T09:15:00Z",
-        maturityDate: "2024-03-21T09:15:00Z", // Tomorrow
-        gracePeriodEnd: "2024-03-22T09:15:00Z", // Day after tomorrow
-        liquidationPrice: isPriceLoading ? 2642 : 25892.3 / 9.8,
-        healthRatio: isPriceLoading ? 78.9 : ((9.8 * ethPrice) / 25892.3) * 100,
-        status: "critical", // In grace period
-        lastHealthCheck: "2024-03-20T14:28:00Z",
-      },
-    ],
+  // Handle loan liquidation
+  const handleLiquidate = async (loanId: bigint) => {
+    await liquidate(loanId)
+    // Refresh positions after liquidation
+    if (stats) {
+      window.location.reload()
+    }
   }
 
-  // Order History
-  const orderHistory = [
-    {
-      id: "H001",
-      type: "lending_order_filled",
-      orderId: "LO006",
-      amount: 5000,
-      rate: 7.2,
-      term: 30,
-      counterparty: "0x9999...aaaa",
-      timestamp: "2024-02-28T15:45:00Z",
-      status: "completed",
-      interestEarned: 89.2,
-    },
-    {
-      id: "H002",
-      type: "borrowing_order_filled",
-      orderId: "BO004",
-      amount: 10000,
-      rate: 8.5,
-      term: 30,
-      counterparty: "0x1234...5678",
-      timestamp: "2024-03-02T10:30:00Z",
-      status: "active",
-      interestOwed: 156.8,
-    },
-    {
-      id: "H003",
-      type: "lending_order_cancelled",
-      orderId: "LO007",
-      amount: 15000,
-      rate: 12.0,
-      term: 90,
-      timestamp: "2024-03-10T09:20:00Z",
-      status: "cancelled",
-      reason: "Better rate available",
-    },
-    {
-      id: "H004",
-      type: "position_liquidated",
-      orderId: "BO005",
-      amount: 3000,
-      collateral: 1.2,
-      liquidationPrice: 2500,
-      timestamp: "2024-02-25T09:20:00Z",
-      status: "liquidated",
-      collateralLoss: 45.2,
-    },
-  ]
-
-  // Portfolio Analytics
+  // Calculate portfolio statistics
   const portfolioStats = {
-    totalLent: matchedPositions.asLender.reduce((sum, pos) => sum + pos.principal, 0),
-    totalBorrowed: matchedPositions.asBorrower.reduce((sum, pos) => sum + pos.principal, 0),
-    totalCollateral: matchedPositions.asBorrower.reduce((sum, pos) => sum + pos.collateralEth, 0),
-    activeOrders: activeOrders.lending.length + activeOrders.borrowing.length,
-    matchedPositions: matchedPositions.asLender.length + matchedPositions.asBorrower.length,
-    totalInterestEarned: matchedPositions.asLender.reduce((sum, pos) => sum + (pos.currentValue - pos.principal), 0),
-    totalInterestOwed: matchedPositions.asBorrower.reduce((sum, pos) => sum + (pos.currentDebt - pos.principal), 0),
-    utilizationRate:
-      activeOrders.lending.length > 0
-        ? (matchedPositions.asLender.length / (matchedPositions.asLender.length + activeOrders.lending.length)) * 100
-        : 0,
-    avgLendingRate:
-      matchedPositions.asLender.length > 0
-        ? matchedPositions.asLender.reduce((sum, pos) => sum + pos.interestRate, 0) / matchedPositions.asLender.length
-        : 0,
-    avgBorrowingRate:
-      matchedPositions.asBorrower.length > 0
-        ? matchedPositions.asBorrower.reduce((sum, pos) => sum + pos.interestRate, 0) /
-          matchedPositions.asBorrower.length
-        : 0,
+    totalLent: stats?.totalLent || 0,
+    totalBorrowed: stats?.totalBorrowed || 0,
+    totalCollateral: borrowerPositions.reduce((sum, pos) => sum + Number(formatEther(pos.collateralAmount)), 0),
+    activeOrders: activeOrders.length,
+    matchedPositions: borrowerPositions.length + lenderPositions.length,
+    totalInterestEarned: stats?.totalInterestEarning || 0,
+    totalInterestOwed: stats?.totalInterestOwed || 0,
+    utilizationRate: lendingOrders.length > 0
+      ? (lenderPositions.length / (lenderPositions.length + lendingOrders.length)) * 100
+      : 0,
+    avgLendingRate: lenderPositions.length > 0
+      ? lenderPositions.reduce((sum, pos) => sum + Number(pos.interestRate), 0) / lenderPositions.length / 100
+      : 0,
+    avgBorrowingRate: borrowerPositions.length > 0
+      ? borrowerPositions.reduce((sum, pos) => sum + Number(pos.interestRate), 0) / borrowerPositions.length / 100
+      : 0,
   }
 
   const getHealthColor = (healthRatio: number) => {
     if (healthRatio >= 150) return "text-green-600"
     if (healthRatio >= 120) return "text-yellow-600"
     return "text-red-600"
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge variant="default">Active</Badge>
+      case "paused":
+        return <Badge variant="secondary">Paused</Badge>
+      case "filled":
+        return <Badge variant="outline">Filled</Badge>
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
+
+  const formatTimeRemaining = (timestamp: string) => {
+    const remaining = new Date(timestamp).getTime() - currentTime.getTime()
+    if (remaining <= 0) return "Expired"
+    
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    
+    if (days > 0) return `${days}d ${hours}h`
+    return `${hours}h`
   }
 
   const getHealthBadgeVariant = (healthRatio: number) => {
@@ -393,7 +290,7 @@ export default function DashboardPage() {
                 <CardDescription>Your EIP-712 signed offers waiting to be matched</CardDescription>
               </CardHeader>
               <CardContent>
-                {activeOrders.lending.length === 0 ? (
+                {lendingOrders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active lending orders</p>
@@ -401,13 +298,13 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {activeOrders.lending.map((order) => (
+                    {lendingOrders.map((order) => (
                       <div key={order.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <div className="font-semibold text-lg">${order.usdcAmount.toLocaleString()} USDC</div>
+                            <div className="font-semibold text-lg">${order.amount.toLocaleString()} USDC</div>
                             <div className="text-sm text-muted-foreground">
-                              {order.interestRate}% APR • {order.term}D • Max LTV {order.maxLtv}%
+                              {order.rate}% APR • {order.term}D • Max LTV {order.max_ltv}%
                             </div>
                           </div>
                           <div className="flex items-center gap-2">{getStatusBadge(order.status)}</div>
@@ -416,19 +313,15 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
                           <div>
                             <div className="text-muted-foreground">Created</div>
-                            <div className="font-medium">{new Date(order.createdAt).toLocaleDateString()}</div>
+                            <div className="font-medium">{new Date(order.created_at).toLocaleDateString()}</div>
                           </div>
                           <div>
-                            <div className="text-muted-foreground">Expires</div>
-                            <div className="font-medium">{formatTimeRemaining(order.expiresAt)}</div>
+                            <div className="text-muted-foreground">Type</div>
+                            <div className="font-medium capitalize">{order.type}</div>
                           </div>
                           <div>
-                            <div className="text-muted-foreground">Views</div>
-                            <div className="font-medium">{order.views}</div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Partial Fills</div>
-                            <div className="font-medium">{order.partialFills}</div>
+                            <div className="text-muted-foreground">Status</div>
+                            <div className="font-medium capitalize">{order.status}</div>
                           </div>
                         </div>
 
@@ -466,7 +359,14 @@ export default function DashboardPage() {
                 <CardDescription>Your borrowing requests with collateral committed</CardDescription>
               </CardHeader>
               <CardContent>
-                {activeOrders.borrowing.length === 0 ? (
+                {isLoadingOrders ? (
+                  <div className="text-center py-8">
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-20 bg-muted rounded-lg" />
+                      <div className="h-20 bg-muted rounded-lg" />
+                    </div>
+                  </div>
+                ) : borrowingOrders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <TrendingDown className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active borrowing orders</p>
@@ -474,13 +374,13 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {activeOrders.borrowing.map((order) => (
+                    {borrowingOrders.map((order: any) => (
                       <div key={order.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <div className="font-semibold text-lg">${order.usdcAmount.toLocaleString()} USDC</div>
+                            <div className="font-semibold text-lg">${Number(order.loan_amount).toLocaleString()} USDC</div>
                             <div className="text-sm text-muted-foreground">
-                              Max {order.maxInterestRate}% APR • {order.term}D • {order.collateralEth} ETH collateral
+                              Max {Number(order.max_interest_rate) / 100}% APR • {order.loan_duration / (24 * 60 * 60)}D • {Number(formatEther(BigInt(order.collateral_amount)))} ETH collateral
                             </div>
                           </div>
                           <div className="flex items-center gap-2">{getStatusBadge(order.status)}</div>
@@ -489,19 +389,19 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
                           <div>
                             <div className="text-muted-foreground">Created</div>
-                            <div className="font-medium">{new Date(order.createdAt).toLocaleDateString()}</div>
+                            <div className="font-medium">{new Date(order.created_at).toLocaleDateString()}</div>
                           </div>
                           <div>
                             <div className="text-muted-foreground">Expires</div>
-                            <div className="font-medium">{formatTimeRemaining(order.expiresAt)}</div>
+                            <div className="font-medium">{formatTimeRemaining(order.expires_at)}</div>
                           </div>
                           <div>
-                            <div className="text-muted-foreground">Views</div>
-                            <div className="font-medium">{order.views}</div>
+                            <div className="text-muted-foreground">Order ID</div>
+                            <div className="font-mono text-xs">{order.id.slice(0, 8)}...</div>
                           </div>
                           <div>
-                            <div className="text-muted-foreground">Offers Received</div>
-                            <div className="font-medium">{order.offers}</div>
+                            <div className="text-muted-foreground">Nonce</div>
+                            <div className="font-medium">{order.nonce}</div>
                           </div>
                         </div>
 
@@ -527,258 +427,16 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="positions" className="space-y-6">
-            {/* Lending Positions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  Active Lending Positions
-                </CardTitle>
-                <CardDescription>USDC lent out and earning interest</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {matchedPositions.asLender.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No active lending positions</p>
-                    <p className="text-sm">Your orders haven&apos;t been matched yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {matchedPositions.asLender.map((position) => (
-                      <div key={position.id} className="border rounded-lg p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-semibold text-lg">${position.currentValue.toLocaleString()} USDC</div>
-                            <div className="text-sm text-muted-foreground">
-                              Principal: ${position.principal.toLocaleString()} • {position.interestRate}% APR •{" "}
-                              {position.term}D
-                            </div>
-                          </div>
-                          <Badge variant={getHealthBadgeVariant(position.healthRatio)}>
-                            Health: {position.healthRatio.toFixed(1)}%
-                          </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Borrower&apos;s Collateral</div>
-                            <div className="font-medium">{position.borrowerCollateral} ETH</div>
-                            <div className="text-xs text-muted-foreground">
-                              {isPriceLoading ? (
-                                <div className="animate-pulse bg-muted rounded h-3 w-16" />
-                              ) : (
-                                `$${position.collateralValueUsd.toLocaleString()}`
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Maturity</div>
-                            <div className="font-medium flex items-center gap-1">
-                              <Timer className="h-3 w-3" />
-                              {formatTimeRemaining(position.maturityDate)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Interest Earned</div>
-                            <div className="font-medium text-green-600">
-                              +${(position.currentValue - position.principal).toFixed(2)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Borrower</div>
-                            <div className="font-mono text-xs">{position.borrower}</div>
-                          </div>
-                        </div>
-
-                        {/* Health Bar */}
-                        <div>
-                          <div className="flex justify-between text-sm mb-2">
-                            <span>Collateral Health</span>
-                            <span className={getHealthColor(position.healthRatio)}>
-                              {position.healthRatio.toFixed(1)}%
-                            </span>
-                          </div>
-                          <Progress value={Math.min(position.healthRatio, 200)} className="h-2" />
-                        </div>
-
-                        {position.status === "at_risk" && (
-                          <Alert variant="destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription>
-                              ⚠️ Borrower&apos;s position is at risk. Monitor closely for liquidation opportunity.
-                            </AlertDescription>
-                          </Alert>
-                        )}
-
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="flex items-center gap-1">
-                            <Activity className="h-4 w-4" />
-                            Monitor
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Borrowing Positions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-blue-600" />
-                  Active Borrowing Positions
-                </CardTitle>
-                <CardDescription>⚠️ Critical: Only 24 hours to repay after maturity!</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {matchedPositions.asBorrower.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No active borrowing positions</p>
-                    <p className="text-sm">Your borrowing orders haven&apos;t been matched yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {matchedPositions.asBorrower.map((position) => {
-                      const maturityStatus = getMaturityStatus(position.maturityDate, position.gracePeriodEnd)
-                      const gracePeriodCountdown = getGracePeriodCountdown(position.gracePeriodEnd)
-
-                      return (
-                        <div
-                          key={position.id}
-                          className={`border rounded-lg p-4 space-y-4 ${
-                            maturityStatus === "critical" || maturityStatus === "grace_period"
-                              ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                              : maturityStatus === "warning"
-                                ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
-                                : ""
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-semibold text-lg">${position.currentDebt.toLocaleString()} USDC</div>
-                              <div className="text-sm text-muted-foreground">
-                                Principal: ${position.principal.toLocaleString()} • {position.interestRate}% APR •{" "}
-                                {position.term}D
-                              </div>
-                            </div>
-                            {getStatusBadge(
-                              maturityStatus === "liquidated"
-                                ? "liquidated"
-                                : maturityStatus === "grace_period"
-                                  ? "critical"
-                                  : position.status,
-                            )}
-                          </div>
-
-                          {/* URGENT COUNTDOWN for grace period */}
-                          {maturityStatus === "grace_period" && !gracePeriodCountdown.expired && (
-                            <Alert variant="destructive" className="border-red-600 bg-red-100 dark:bg-red-950">
-                              <AlertCircle className="h-4 w-4 animate-pulse" />
-                              <AlertDescription className="font-bold">
-                                🚨 GRACE PERIOD: {gracePeriodCountdown.text} TO REPAY OR LOSE ALL COLLATERAL!
-                              </AlertDescription>
-                            </Alert>
-                          )}
-
-                          {/* Critical warning approaching maturity */}
-                          {maturityStatus === "critical" && (
-                            <Alert variant="destructive" className="border-orange-600 bg-orange-100 dark:bg-orange-950">
-                              <Clock className="h-4 w-4" />
-                              <AlertDescription className="font-semibold">
-                                ⚠️ LOAN MATURES IN LESS THAN 24 HOURS! Prepare to repay immediately.
-                              </AlertDescription>
-                            </Alert>
-                          )}
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <div className="text-muted-foreground">Your Collateral</div>
-                              <div className="font-medium">{position.collateralEth} ETH</div>
-                              <div className="text-xs text-muted-foreground">
-                                {isPriceLoading ? (
-                                  <div className="animate-pulse bg-muted rounded h-3 w-16" />
-                                ) : (
-                                  `$${position.collateralValueUsd.toLocaleString()}`
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-muted-foreground">
-                                {maturityStatus === "grace_period" ? "Grace Period Ends" : "Maturity"}
-                              </div>
-                              <div className="font-medium flex items-center gap-1">
-                                <Timer className="h-3 w-3" />
-                                {maturityStatus === "grace_period"
-                                  ? gracePeriodCountdown.text
-                                  : formatTimeRemaining(position.maturityDate)}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-muted-foreground">Liquidation Price</div>
-                              <div className="font-medium">${position.liquidationPrice.toFixed(0)}</div>
-                              <div className="text-xs text-muted-foreground">
-                                Current: {isPriceLoading ? "..." : `$${ethPrice.toLocaleString()}`}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-muted-foreground">Lender</div>
-                              <div className="font-mono text-xs">{position.lender}</div>
-                            </div>
-                          </div>
-
-                          {/* Health Bar */}
-                          <div>
-                            <div className="flex justify-between text-sm mb-2">
-                              <span>Position Health</span>
-                              <span className={getHealthColor(position.healthRatio)}>
-                                {position.healthRatio.toFixed(1)}%
-                              </span>
-                            </div>
-                            <Progress value={Math.min(position.healthRatio, 200)} className="h-2" />
-                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                              <span>Liquidation (100%)</span>
-                              <span>Safe (150%+)</span>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            {maturityStatus === "liquidated" ? (
-                              <Button size="sm" className="flex-1" disabled variant="destructive">
-                                LIQUIDATED - Collateral Lost
-                              </Button>
-                            ) : maturityStatus === "grace_period" ? (
-                              <Button size="sm" className="flex-1 animate-pulse" variant="destructive">
-                                🚨 REPAY NOW ({gracePeriodCountdown.text} LEFT)
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                className="flex-1"
-                                variant={maturityStatus === "critical" ? "destructive" : "default"}
-                              >
-                                {maturityStatus === "critical"
-                                  ? "⚠️ REPAY URGENTLY"
-                                  : `Repay Loan (${formatTimeRemaining(position.maturityDate)} to maturity)`}
-                              </Button>
-                            )}
-                            <Button size="sm" variant="ghost">
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PositionsTab
+              borrowerPositions={borrowerPositions}
+              lenderPositions={lenderPositions}
+              ethPrice={ethPrice}
+              isLoading={isLoadingPositions}
+              onRepay={handleRepay}
+              onLiquidate={handleLiquidate}
+              isRepaying={isRepaying}
+              isLiquidating={isLiquidating}
+            />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">

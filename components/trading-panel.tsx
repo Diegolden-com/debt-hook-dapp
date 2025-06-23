@@ -13,6 +13,9 @@ import { TrendingUp, TrendingDown, Info, AlertTriangle, Wallet, DollarSign, Zap 
 import { useEthPrice } from "@/hooks/use-eth-price"
 import { usePrivyWallet } from "@/hooks/use-privy-wallet"
 import { usePrivy } from "@privy-io/react-auth"
+import { useDebtOrderBook } from "@/lib/hooks/contracts"
+import { parseUnits } from "viem"
+import { toast } from "sonner"
 
 interface TradingPanelProps {
   bestBid: number
@@ -26,6 +29,7 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
   const { address, isConnected } = usePrivyWallet()
   const { login } = usePrivy()
+  const { signLoanOrder } = useDebtOrderBook()
 
   // Lending form state
   const [lendingForm, setLendingForm] = useState({
@@ -66,6 +70,30 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
     }
     
     try {
+      // Convert form values to contract format
+      const loanAmount = parseUnits(lendingForm.usdcAmount, 6) // USDC has 6 decimals
+      const requiredEth = calculateRequiredEth(lendingForm.usdcAmount, lendingForm.maxLtv)
+      const collateralAmount = parseUnits(requiredEth, 18) // ETH has 18 decimals
+      const interestRate = BigInt(Math.floor(Number.parseFloat(lendingForm.interestRate) * 100)) // Convert to basis points
+      const duration = BigInt(Number.parseInt(lendingForm.term) * 24 * 60 * 60) // Convert days to seconds
+      const expiry = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60) // 30 days from now
+      
+      // Sign the order
+      const signedOrder = await signLoanOrder({
+        lender: address,
+        collateralAmount,
+        loanAmount,
+        interestRate,
+        duration,
+        expiry,
+      })
+      
+      if (!signedOrder) {
+        toast.error("Failed to sign order")
+        return
+      }
+      
+      // Create order data for Supabase
       const orderData = {
         type: "bid" as const,
         rate: Number.parseFloat(lendingForm.interestRate),
@@ -74,11 +102,22 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
         lender: address,
         max_ltv: Number.parseInt(lendingForm.maxLtv),
         status: "active" as const,
+        // Add contract fields
+        signature: signedOrder.signature,
+        collateral_amount: collateralAmount.toString(),
+        loan_amount: loanAmount.toString(),
+        interest_rate_bps: interestRate.toString(),
+        duration_seconds: duration.toString(),
+        expiry_timestamp: expiry.toString(),
+        nonce: signedOrder.nonce.toString(),
       }
+      
       await onCreateOrder(orderData)
+      toast.success("Lending offer created successfully!")
       setLendingForm({ usdcAmount: "", interestRate: "", term: "30", maxLtv: "75" })
     } catch (error) {
       console.error("Error creating lending order:", error)
+      toast.error("Failed to create lending offer")
     }
   }
 
