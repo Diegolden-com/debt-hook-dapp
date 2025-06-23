@@ -266,7 +266,7 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  Your lending offer will be visible to all users. You'll earn interest when someone borrows against it.
+                  Your lending offer will be visible to all users. You&apos;ll earn interest when someone borrows against it.
                 </AlertDescription>
               </Alert>
 

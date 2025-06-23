@@ -24,7 +24,7 @@ export function useRealtimeOrderbook(selectedTerm: string) {
       const { data: orders, error: fetchError } = await supabase
         .from("orders")
         .select("*")
-        .eq("term", selectedTerm)
+        .eq("term", Number(selectedTerm) as 30 | 90 | 180)
         .eq("status", "active")
         .order("rate", { ascending: true })
 

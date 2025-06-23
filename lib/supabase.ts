@@ -1,24 +1,15 @@
 import { createClient } from "@supabase/supabase-js"
+import { Database } from "@/types/database"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
 
-// Database types
-export interface Order {
-  id: string
-  type: "bid" | "ask"
-  rate: number
-  amount: number
-  term: number
-  lender?: string
-  borrower?: string
-  max_ltv?: number
-  status: "active" | "filled" | "cancelled"
-  created_at: string
-  updated_at: string
-}
+// Re-export types from database for convenience
+export type Order = Database['public']['Tables']['orders']['Row']
+export type OrderInsert = Database['public']['Tables']['orders']['Insert']
+export type OrderUpdate = Database['public']['Tables']['orders']['Update']
 
 export interface OrderBookData {
   bids: Order[]

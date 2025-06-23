@@ -1,9 +1,9 @@
 'use client';
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
-import { createWalletClient, custom, type WalletClient } from "viem";
-import { baseSepolia } from "viem/chains";
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useEffect, useState } from 'react';
+import { createWalletClient, custom, type WalletClient } from 'viem';
+import { baseSepolia } from 'viem/chains';
 
 export function usePrivyWallet() {
   const { ready, authenticated, user } = usePrivy();

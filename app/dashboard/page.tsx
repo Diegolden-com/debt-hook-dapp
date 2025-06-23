@@ -258,19 +258,19 @@ export default function DashboardPage() {
         : 0,
   }
 
-  const getHealthColor = (healthRatio) => {
+  const getHealthColor = (healthRatio: number) => {
     if (healthRatio >= 150) return "text-green-600"
     if (healthRatio >= 120) return "text-yellow-600"
     return "text-red-600"
   }
 
-  const getHealthBadgeVariant = (healthRatio) => {
+  const getHealthBadgeVariant = (healthRatio: number) => {
     if (healthRatio >= 150) return "default"
     if (healthRatio >= 120) return "secondary"
     return "destructive"
   }
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
         return (
@@ -311,10 +311,10 @@ export default function DashboardPage() {
     }
   }
 
-  const formatTimeRemaining = (dateString) => {
+  const formatTimeRemaining = (dateString: string) => {
     const maturity = new Date(dateString)
     const now = new Date()
-    const diffTime = maturity - now
+    const diffTime = maturity.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays <= 0) return "Expired"
@@ -322,10 +322,10 @@ export default function DashboardPage() {
     return `${diffDays} days`
   }
 
-  const getGracePeriodCountdown = (gracePeriodEnd) => {
+  const getGracePeriodCountdown = (gracePeriodEnd: string) => {
     const now = currentTime
     const graceEnd = new Date(gracePeriodEnd)
-    const diffTime = graceEnd - now
+    const diffTime = graceEnd.getTime() - now.getTime()
 
     if (diffTime <= 0) return { expired: true, text: "LIQUIDATED" }
 
@@ -340,7 +340,7 @@ export default function DashboardPage() {
     }
   }
 
-  const getMaturityStatus = (maturityDate, gracePeriodEnd) => {
+  const getMaturityStatus = (maturityDate: string, gracePeriodEnd: string) => {
     const now = currentTime
     const maturity = new Date(maturityDate)
     const graceEnd = new Date(gracePeriodEnd)
@@ -348,7 +348,7 @@ export default function DashboardPage() {
     if (now > graceEnd) return "liquidated"
     if (now > maturity) return "grace_period"
 
-    const timeToMaturity = maturity - now
+    const timeToMaturity = maturity.getTime() - now.getTime()
     const hoursToMaturity = timeToMaturity / (1000 * 60 * 60)
 
     if (hoursToMaturity <= 24) return "critical"
@@ -541,7 +541,7 @@ export default function DashboardPage() {
                   <div className="text-center py-8 text-muted-foreground">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active lending positions</p>
-                    <p className="text-sm">Your orders haven't been matched yet</p>
+                    <p className="text-sm">Your orders haven&apos;t been matched yet</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -562,7 +562,7 @@ export default function DashboardPage() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <div className="text-muted-foreground">Borrower's Collateral</div>
+                            <div className="text-muted-foreground">Borrower&apos;s Collateral</div>
                             <div className="font-medium">{position.borrowerCollateral} ETH</div>
                             <div className="text-xs text-muted-foreground">
                               {isPriceLoading ? (
@@ -606,7 +606,7 @@ export default function DashboardPage() {
                           <Alert variant="destructive">
                             <AlertTriangle className="h-4 w-4" />
                             <AlertDescription>
-                              ⚠️ Borrower's position is at risk. Monitor closely for liquidation opportunity.
+                              ⚠️ Borrower&apos;s position is at risk. Monitor closely for liquidation opportunity.
                             </AlertDescription>
                           </Alert>
                         )}
@@ -641,7 +641,7 @@ export default function DashboardPage() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active borrowing positions</p>
-                    <p className="text-sm">Your borrowing orders haven't been matched yet</p>
+                    <p className="text-sm">Your borrowing orders haven&apos;t been matched yet</p>
                   </div>
                 ) : (
                   <div className="space-y-4">

@@ -13,13 +13,13 @@ import { useEthPrice } from "@/hooks/use-eth-price"
 import { useRealtimeOrderbook } from "@/hooks/use-realtime-orderbook"
 
 export default function MarketPage() {
-  const [selectedOffer, setSelectedOffer] = useState(null)
+  const [selectedOffer, setSelectedOffer] = useState<any>(null)
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
 
   // Use a default term for the trading panel, but the OrderBook manages its own term
   const { bestBid, bestAsk, createOrder } = useRealtimeOrderbook("30") // Default to 30 days for trading panel
 
-  const calculateRequiredEth = (usdcAmount, ltv) => {
+  const calculateRequiredEth = (usdcAmount: string, ltv: string) => {
     if (!usdcAmount || !ltv || isPriceLoading || !ethPrice) return 0
     const loanValue = Number.parseFloat(usdcAmount)
     const ltvRatio = Number.parseFloat(ltv) / 100
@@ -27,13 +27,17 @@ export default function MarketPage() {
     return (collateralValue / ethPrice).toFixed(4)
   }
 
-  const handleTakeOffer = async (offer) => {
+  const handleTakeOffer = async (offer: any) => {
     try {
       console.log("Taking offer on-chain:", offer)
       setSelectedOffer(null)
     } catch (error) {
       console.error("Error taking offer:", error)
     }
+  }
+
+  const handleCreateOrder = async (orderData: any) => {
+    await createOrder(orderData)
   }
 
   return (
@@ -69,7 +73,7 @@ export default function MarketPage() {
             <TradingPanel
               bestBid={bestBid}
               bestAsk={bestAsk}
-              onCreateOrder={createOrder}
+              onCreateOrder={handleCreateOrder}
               onTakeOrder={handleTakeOffer}
             />
           </div>
@@ -89,7 +93,7 @@ export default function MarketPage() {
                   <h3 className="font-medium mb-3">Loan Terms</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>You'll receive:</span>
+                      <span>You&apos;ll receive:</span>
                       <span className="font-medium">${selectedOffer.amount.toLocaleString()} USDC</span>
                     </div>
                     <div className="flex justify-between">

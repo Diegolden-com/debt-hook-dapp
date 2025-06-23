@@ -117,7 +117,7 @@ export function OrderBook({ onOrderSelect }: OrderBookProps) {
                     >
                       <span className="font-mono text-green-600">{bid.rate.toFixed(1)}</span>
                       <span className="font-mono">{bid.amount.toLocaleString()}</span>
-                      <span className="font-mono text-muted-foreground">{bid.total?.toLocaleString()}</span>
+                      <span className="font-mono text-muted-foreground">{bid.amount.toLocaleString()}</span>
                     </div>
                   ))
                 )}
@@ -150,7 +150,7 @@ export function OrderBook({ onOrderSelect }: OrderBookProps) {
                     >
                       <span className="font-mono text-red-600">{ask.rate.toFixed(1)}</span>
                       <span className="font-mono">{ask.amount.toLocaleString()}</span>
-                      <span className="font-mono text-muted-foreground">{ask.total?.toLocaleString()}</span>
+                      <span className="font-mono text-muted-foreground">{ask.amount.toLocaleString()}</span>
                     </div>
                   ))
                 )}
