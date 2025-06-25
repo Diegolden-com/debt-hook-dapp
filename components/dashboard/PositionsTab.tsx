@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +28,7 @@ interface PositionsTabProps {
   isLiquidating: boolean
 }
 
-export function PositionsTab({
+export const PositionsTab = memo(function PositionsTab({
   borrowerPositions,
   lenderPositions,
   ethPrice,
@@ -103,7 +104,7 @@ export function PositionsTab({
                           {Math.floor(Number(position.duration) / (24 * 60 * 60))}D
                         </div>
                       </div>
-                      <Badge variant={getHealthBadgeVariant(BigInt(Math.floor(healthRatio * 100)))}>
+                      <Badge variant={getHealthBadgeVariant(healthRatio)}>
                         Health: {healthRatio.toFixed(1)}%
                       </Badge>
                     </div>
@@ -139,7 +140,7 @@ export function PositionsTab({
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Collateral Health</span>
-                        <span className={getHealthColor(BigInt(Math.floor(healthRatio * 100)))}>
+                        <span className={getHealthColor(healthRatio)}>
                           {healthRatio.toFixed(1)}%
                         </span>
                       </div>
@@ -296,4 +297,4 @@ export function PositionsTab({
       </Card>
     </div>
   )
-}
+})

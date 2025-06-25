@@ -56,6 +56,9 @@ export function useUserPositions() {
       const borrowerLoans = loans.filter(loan => loan.borrower === address)
       const lenderLoans = loans.filter(loan => loan.lender === address)
 
+      // Use current ethPrice value without making it a dependency
+      const currentEthPrice = ethPrice || 2000
+
       // Fetch loan details for borrower positions
       const borrowerPositionsList = await Promise.all(
         borrowerLoans.map(async (dbLoan) => {
@@ -66,7 +69,7 @@ export function useUserPositions() {
 
           const [currentDebt, healthFactor] = await Promise.all([
             calculateCurrentDebt(loanId),
-            getHealthFactor(loanId, ethPrice || 2000),
+            getHealthFactor(loanId, currentEthPrice),
           ])
 
           const enrichedLoan: EnrichedLoan = {
@@ -121,11 +124,35 @@ export function useUserPositions() {
     } finally {
       setIsLoading(false)
     }
-  }, [address, getLoan, calculateCurrentDebt, getHealthFactor, ethPrice])
+  }, [address, getLoan, calculateCurrentDebt, getHealthFactor]) // Removed ethPrice dependency
 
   useEffect(() => {
     fetchPositions()
-  }, [fetchPositions])
+  }, [address]) // Only refetch when address changes
+
+  // Add a separate effect to update health factors when ethPrice changes
+  useEffect(() => {
+    if (!ethPrice || borrowerPositions.length === 0) return
+
+    // Update health factors for existing positions when price changes
+    const updateHealthFactors = async () => {
+      const updatedPositions = await Promise.all(
+        borrowerPositions.map(async (position) => {
+          const loanId = position.id
+          const healthFactor = await getHealthFactor(loanId, ethPrice)
+          
+          return {
+            ...position,
+            healthFactor,
+            isLiquidatable: healthFactor < 150,
+          }
+        })
+      )
+      setBorrowerPositions(updatedPositions)
+    }
+
+    updateHealthFactors()
+  }, [ethPrice, getHealthFactor]) // Only update when price changes, not refetch everything
 
   // Calculate portfolio stats
   const calculateStats = useCallback(() => {

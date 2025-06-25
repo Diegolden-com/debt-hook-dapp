@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 import { 
   createPublicClient,
   http,
@@ -32,10 +32,10 @@ export function useDebtHook() {
   const [isRepaying, setIsRepaying] = useState(false)
   const [isLiquidating, setIsLiquidating] = useState(false)
   
-  const publicClient = createPublicClient({
+  const publicClient = useMemo(() => createPublicClient({
     chain,
     transport: http(RPC_URL),
-  })
+  }), [])
 
   // Get loan by ID
   const getLoan = useCallback(async (loanId: string): Promise<Loan | null> => {

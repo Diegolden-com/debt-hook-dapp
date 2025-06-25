@@ -206,7 +206,7 @@ export function OrderBook({ onOrderSelect }: OrderBookProps) {
                   <span className="font-mono">
                     {activity.rate.toFixed(1)}% • ${activity.amount.toLocaleString()} • {activity.term}D
                   </span>
-                  <span className="text-muted-foreground">{new Date(activity.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-muted-foreground">{new Date(activity.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
                 </div>
               ))}
             </div>
@@ -225,7 +225,7 @@ export function OrderBook({ onOrderSelect }: OrderBookProps) {
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Last Update</div>
-            <div className="font-semibold text-green-600 text-xs">{lastUpdate.toLocaleTimeString()}</div>
+            <div className="font-semibold text-green-600 text-xs">{lastUpdate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Term</div>

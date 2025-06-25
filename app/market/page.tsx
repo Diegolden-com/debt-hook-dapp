@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/layout/header"
 import { EthPriceDisplay } from "@/components/eth-price-display"
 import { OrderBook } from "@/components/order-book"
@@ -17,11 +17,26 @@ import type { Address } from "viem"
 
 export default function MarketPage() {
   const [selectedOffer, setSelectedOffer] = useState<any>(null)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
   const { createLoanWithOrder, isCreating } = useDebtOrderBook()
 
   // Use a default term for the trading panel, but the OrderBook manages its own term
-  const { bestBid, bestAsk, createOrder, fillOrder } = useRealtimeOrderbook("30") // Default to 30 days for trading panel
+  const { bestBid, bestAsk, createOrder, fillOrder, isLoading: isOrderbookLoading } = useRealtimeOrderbook("30") // Default to 30 days for trading panel
+
+  // Handle initial load state
+  useEffect(() => {
+    if (!isPriceLoading && !isOrderbookLoading) {
+      setIsInitialLoad(false)
+    }
+    
+    // Timeout fallback to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setIsInitialLoad(false)
+    }, 3000) // 3 second timeout
+    
+    return () => clearTimeout(timeout)
+  }, [isPriceLoading, isOrderbookLoading])
 
   const calculateRequiredEth = (usdcAmount: string, ltv: string) => {
     if (!usdcAmount || !ltv || isPriceLoading || !ethPrice) return 0
@@ -51,7 +66,7 @@ export default function MarketPage() {
       }
 
       // Execute the order on-chain
-      await execute(signedOrder)
+      await createLoanWithOrder(signedOrder)
       
       // Update order status in database
       await fillOrder(offer.id)
@@ -73,42 +88,57 @@ export default function MarketPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-6 md:py-8">
-        {/* ETH Price Display - Prominent */}
-        <div className="mb-8">
-          <EthPriceDisplay />
-        </div>
-
-        {/* Market Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">ETH/USDC Debt Market</h1>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <span>Real-time order book for collateralized lending</span>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm">Live Market Data</span>
+        {/* Show loading skeleton on initial load */}
+        {isInitialLoad ? (
+          <div className="space-y-8 animate-pulse">
+            <div className="h-32 bg-muted rounded-lg" />
+            <div className="space-y-4">
+              <div className="h-8 bg-muted rounded w-1/3" />
+              <div className="h-4 bg-muted rounded w-1/2" />
+            </div>
+            <div className="grid lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3 h-96 bg-muted rounded-lg" />
+              <div className="h-96 bg-muted rounded-lg" />
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* ETH Price Display - Prominent */}
+            <div className="mb-8">
+              <EthPriceDisplay />
+            </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Integrated Order Book with Chart */}
-          <div className="lg:col-span-3">
-            <OrderBook onOrderSelect={setSelectedOffer} />
-          </div>
+            {/* Market Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold mb-2">ETH/USDC Debt Market</h1>
+              <div className="flex items-center gap-4 text-muted-foreground">
+                <span>Real-time order book for collateralized lending</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm">Live Market Data</span>
+                </div>
+              </div>
+            </div>
 
-          {/* Unified Trading Panel */}
-          <div>
-            <TradingPanel
-              bestBid={bestBid}
-              bestAsk={bestAsk}
-              onCreateOrder={handleCreateOrder}
-              onTakeOrder={handleTakeOffer}
-            />
-          </div>
-        </div>
+            <div className="grid lg:grid-cols-4 gap-6">
+              {/* Integrated Order Book with Chart */}
+              <div className="lg:col-span-3">
+                <OrderBook onOrderSelect={setSelectedOffer} />
+              </div>
 
-        {/* Order Confirmation Dialog */}
-        {selectedOffer && (
+              {/* Unified Trading Panel */}
+              <div>
+                <TradingPanel
+                  bestBid={bestBid}
+                  bestAsk={bestAsk}
+                  onCreateOrder={handleCreateOrder}
+                  onTakeOrder={handleTakeOffer}
+                />
+              </div>
+            </div>
+
+            {/* Order Confirmation Dialog */}
+            {selectedOffer && (
           <Dialog open={!!selectedOffer} onOpenChange={() => setSelectedOffer(null)}>
             <DialogContent>
               <DialogHeader>
@@ -166,9 +196,9 @@ export default function MarketPage() {
                   onClick={() => handleTakeOffer(selectedOffer)}
                   className="w-full"
                   size="lg"
-                  disabled={isPriceLoading || isExecuting}
+                  disabled={isPriceLoading || isCreating}
                 >
-                  {isExecuting ? (
+                  {isCreating ? (
                     <>Processing...</>
                   ) : (
                     <>
@@ -180,6 +210,9 @@ export default function MarketPage() {
               </div>
             </DialogContent>
           </Dialog>
+            )}
+          </>
+        )}
         )}
       </div>
     </div>

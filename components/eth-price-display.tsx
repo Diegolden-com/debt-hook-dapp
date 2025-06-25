@@ -81,7 +81,7 @@ export function EthPriceDisplay() {
               {isLoading ? (
                 <div className="animate-pulse bg-muted rounded h-4 w-20" />
               ) : lastUpdated ? (
-                lastUpdated.toLocaleTimeString()
+                lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
               ) : (
                 "Never"
               )}

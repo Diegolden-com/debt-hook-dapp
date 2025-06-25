@@ -35,26 +35,18 @@ import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { usePrivyWallet } from "@/hooks/use-privy-wallet"
 import { PositionsTab } from "@/components/dashboard/PositionsTab"
+import { TimeDisplay } from "@/components/dashboard/TimeDisplay"
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("orders")
-  const [currentTime, setCurrentTime] = useState(new Date())
   const [activeOrders, setActiveOrders] = useState<any[]>([])
   const [isLoadingOrders, setIsLoadingOrders] = useState(true)
   const [orderHistory, setOrderHistory] = useState<any[]>([])
   
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
   const { address } = usePrivyWallet()
-  const { borrowerPositions, lenderPositions, stats, isLoading: isLoadingPositions } = useUserPositions()
+  const { borrowerPositions, lenderPositions, stats, isLoading: isLoadingPositions, refetch: refetchPositions } = useUserPositions()
   const { repay, liquidate, isRepaying, isLiquidating } = useDebtHook()
-
-  // Update time every second for real-time countdown
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   // Fetch active orders from Supabase
   useEffect(() => {
@@ -121,19 +113,21 @@ export default function DashboardPage() {
 
   // Handle loan repayment
   const handleRepay = async (loanId: string, amount: bigint) => {
-    await repay(loanId, amount)
+    const result = await repay(loanId, amount)
     // Refresh positions after repayment
-    if (stats) {
-      window.location.reload()
+    if (result) {
+      // Refetch data instead of reloading the page
+      refetchPositions()
     }
   }
 
   // Handle loan liquidation
   const handleLiquidate = async (loanId: string) => {
-    await liquidate(loanId)
+    const result = await liquidate(loanId)
     // Refresh positions after liquidation
-    if (stats) {
-      window.location.reload()
+    if (result) {
+      // Refetch data instead of reloading the page
+      refetchPositions()
     }
   }
 
@@ -178,16 +172,6 @@ export default function DashboardPage() {
     }
   }
 
-  const formatTimeRemaining = (timestamp: string) => {
-    const remaining = new Date(timestamp).getTime() - currentTime.getTime()
-    if (remaining <= 0) return "Expired"
-    
-    const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    
-    if (days > 0) return `${days}d ${hours}h`
-    return `${hours}h`
-  }
 
   const getHealthBadgeVariant = (healthRatio: number) => {
     if (healthRatio >= 150) return "default"
@@ -195,39 +179,6 @@ export default function DashboardPage() {
     return "destructive"
   }
 
-  const getGracePeriodCountdown = (gracePeriodEnd: string) => {
-    const now = currentTime
-    const graceEnd = new Date(gracePeriodEnd)
-    const diffTime = graceEnd.getTime() - now.getTime()
-
-    if (diffTime <= 0) return { expired: true, text: "LIQUIDATED" }
-
-    const hours = Math.floor(diffTime / (1000 * 60 * 60))
-    const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60))
-    const seconds = Math.floor((diffTime % (1000 * 60)) / 1000)
-
-    if (hours > 0) {
-      return { expired: false, text: `${hours}h ${minutes}m ${seconds}s`, urgent: hours < 6 }
-    } else {
-      return { expired: false, text: `${minutes}m ${seconds}s`, urgent: true }
-    }
-  }
-
-  const getMaturityStatus = (maturityDate: string, gracePeriodEnd: string) => {
-    const now = currentTime
-    const maturity = new Date(maturityDate)
-    const graceEnd = new Date(gracePeriodEnd)
-
-    if (now > graceEnd) return "liquidated"
-    if (now > maturity) return "grace_period"
-
-    const timeToMaturity = maturity.getTime() - now.getTime()
-    const hoursToMaturity = timeToMaturity / (1000 * 60 * 60)
-
-    if (hoursToMaturity <= 24) return "critical"
-    if (hoursToMaturity <= 72) return "warning"
-    return "healthy"
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -369,7 +320,7 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <div className="text-muted-foreground">Expires</div>
-                            <div className="font-medium">{formatTimeRemaining(order.expires_at)}</div>
+                            <div className="font-medium"><TimeDisplay timestamp={order.expires_at} /></div>
                           </div>
                           <div>
                             <div className="text-muted-foreground">Order ID</div>

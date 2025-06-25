@@ -18,7 +18,10 @@ export function useRealtimeOrderbook(selectedTerm: string) {
   // Fetch initial data
   const fetchOrderBook = async () => {
     try {
-      setIsLoading(true)
+      // Don't set loading on refetch to avoid UI flicker
+      if (orderBook.bids.length === 0 && orderBook.asks.length === 0) {
+        setIsLoading(true)
+      }
       setError(null)
 
       const { data: orders, error: fetchError } = await supabase
