@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeOrders, setActiveOrders] = useState<any[]>([])
   const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+  const [orderHistory, setOrderHistory] = useState<any[]>([])
   
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
   const { address } = usePrivyWallet()
@@ -84,6 +85,33 @@ export default function DashboardPage() {
     fetchActiveOrders()
   }, [address])
 
+  // Fetch order history from Supabase
+  useEffect(() => {
+    async function fetchOrderHistory() {
+      if (!address) {
+        setOrderHistory([])
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .or(`lender.eq.${address},borrower.eq.${address}`)
+          .in('status', ['filled', 'cancelled', 'expired', 'liquidated', 'repaid'])
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+        setOrderHistory(data || [])
+      } catch (err) {
+        console.error('Error fetching order history:', err)
+      }
+    }
+
+    fetchOrderHistory()
+  }, [address])
+
   // Split active orders by type
   const lendingOrders = activeOrders.filter(order => order.order_type === 'lending' && order.lender === address)
   const borrowingOrders = activeOrders.filter(order => order.order_type === 'borrowing' && order.borrower === address)
@@ -92,7 +120,7 @@ export default function DashboardPage() {
   const GRACE_PERIOD = 24 * 60 * 60 // 1 day in seconds
 
   // Handle loan repayment
-  const handleRepay = async (loanId: bigint, amount: bigint) => {
+  const handleRepay = async (loanId: string, amount: bigint) => {
     await repay(loanId, amount)
     // Refresh positions after repayment
     if (stats) {
@@ -101,7 +129,7 @@ export default function DashboardPage() {
   }
 
   // Handle loan liquidation
-  const handleLiquidate = async (loanId: bigint) => {
+  const handleLiquidate = async (loanId: string) => {
     await liquidate(loanId)
     // Refresh positions after liquidation
     if (stats) {
@@ -165,58 +193,6 @@ export default function DashboardPage() {
     if (healthRatio >= 150) return "default"
     if (healthRatio >= 120) return "secondary"
     return "destructive"
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-            Active
-          </Badge>
-        )
-      case "paused":
-        return <Badge variant="secondary">Paused</Badge>
-      case "healthy":
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-            Healthy
-          </Badge>
-        )
-      case "warning":
-        return (
-          <Badge variant="destructive" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-            Warning
-          </Badge>
-        )
-      case "critical":
-        return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200 animate-pulse">
-            🚨 CRITICAL
-          </Badge>
-        )
-      case "at_risk":
-        return <Badge variant="destructive">At Risk</Badge>
-      case "liquidated":
-        return (
-          <Badge variant="destructive" className="bg-gray-100 text-gray-800 border-gray-200">
-            Liquidated
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
-  const formatTimeRemaining = (dateString: string) => {
-    const maturity = new Date(dateString)
-    const now = new Date()
-    const diffTime = maturity.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays <= 0) return "Expired"
-    if (diffDays === 1) return "1 day"
-    return `${diffDays} days`
   }
 
   const getGracePeriodCountdown = (gracePeriodEnd: string) => {

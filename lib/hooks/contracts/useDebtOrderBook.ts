@@ -30,47 +30,36 @@ export interface SignedLoanOrder extends LoanOrder {
 
 export function useDebtOrderBook() {
   const { address, walletClient } = usePrivyWallet()
-  const [nonce, setNonce] = useState<bigint | null>(null)
+  const [nonce, setNonce] = useState<bigint>(BigInt(0))
+  const [isCreating, setIsCreating] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   
   const publicClient = createPublicClient({
     chain,
     transport: http(RPC_URL),
   })
 
-  // Get user's nonce
+  // Generate a nonce based on timestamp and random value
   useEffect(() => {
-    async function fetchNonce() {
-      if (!publicClient || !address) return
-      
-      try {
-        const userNonce = await publicClient.readContract({
-          address: contracts.debtOrderBook.address,
-          abi: contracts.debtOrderBook.abi,
-          functionName: 'nonces',
-          args: [address],
-        })
-        setNonce(userNonce as bigint)
-      } catch (error) {
-        console.error('Error fetching nonce:', error)
-      }
-    }
-    
-    fetchNonce()
-  }, [publicClient, address])
+    // Use timestamp + random value for nonce to avoid collisions
+    const timestamp = BigInt(Math.floor(Date.now() / 1000))
+    const random = BigInt(Math.floor(Math.random() * 1000000))
+    setNonce(timestamp * BigInt(1000000) + random)
+  }, [])
 
   // Check if order has been executed
-  const isOrderExecuted = useCallback(async (orderHash: `0x${string}`): Promise<boolean> => {
+  const isOrderExecuted = useCallback(async (nonce: bigint): Promise<boolean> => {
     if (!publicClient) return false
     
     try {
-      const executed = await publicClient.readContract({
+      const used = await publicClient.readContract({
         address: contracts.debtOrderBook.address,
         abi: contracts.debtOrderBook.abi,
-        functionName: 'executedOrders',
-        args: [orderHash],
+        functionName: 'usedNonces',
+        args: [nonce],
       })
       
-      return executed as boolean
+      return used as boolean
     } catch (error) {
       console.error('Error checking order status:', error)
       return false
@@ -79,7 +68,7 @@ export function useDebtOrderBook() {
 
   // Sign a loan order
   const signLoanOrder = useCallback(async (order: Omit<LoanOrder, 'nonce'>): Promise<SignedLoanOrder | null> => {
-    if (!walletClient || !address || nonce === null) {
+    if (!walletClient || !address) {
       toast.error('Please connect your wallet')
       return null
     }
@@ -98,187 +87,107 @@ export function useDebtOrderBook() {
         },
         types: LOAN_ORDER_TYPES,
         primaryType: 'LoanOrder',
-        message: orderWithNonce,
+        message: {
+          lender: orderWithNonce.lender,
+          collateralAmount: orderWithNonce.collateralAmount,
+          loanAmount: orderWithNonce.loanAmount,
+          interestRate: orderWithNonce.interestRate,
+          duration: orderWithNonce.duration,
+          expiry: orderWithNonce.expiry,
+          nonce: orderWithNonce.nonce,
+        },
       })
 
-      return {
+      const signedOrder: SignedLoanOrder = {
         ...orderWithNonce,
-        signature,
+        signature: signature as `0x${string}`,
       }
+
+      toast.success('Order signed successfully')
+      
+      // Increment nonce for next order
+      setNonce(nonce + BigInt(1))
+      
+      return signedOrder
     } catch (error: any) {
       console.error('Error signing order:', error)
-      toast.error(error.message || 'Failed to sign order')
+      toast.error('Failed to sign order', {
+        description: error?.message || 'Unknown error'
+      })
       return null
     }
   }, [walletClient, address, nonce])
 
-  // Execute order
-  const [executeHash, setExecuteHash] = useState<Hash | null>(null)
-  const [isExecuting, setIsExecuting] = useState(false)
-  const [executeError, setExecuteError] = useState<Error | null>(null)
-
-  const execute = useCallback(async (order: SignedLoanOrder) => {
-    if (!walletClient || !address) {
+  // Create loan with signed order
+  const createLoanWithOrder = useCallback(async (
+    order: SignedLoanOrder,
+    borrower: Address
+  ): Promise<Hash | null> => {
+    if (!walletClient || !address || !publicClient) {
       toast.error('Please connect your wallet')
-      return
+      return null
     }
 
-    setIsExecuting(true)
-    setExecuteError(null)
-
+    setIsCreating(true)
     try {
-      // First approve WETH for collateral if needed
-      const allowance = await publicClient.readContract({
-        address: contracts.weth.address,
-        abi: contracts.weth.abi,
-        functionName: 'allowance',
-        args: [address, contracts.debtOrderBook.address],
-      }) as bigint
-
-      if (allowance < order.collateralAmount) {
-        toast.info('Approving WETH for collateral...')
-        
-        const { request } = await publicClient.simulateContract({
-          address: contracts.weth.address,
-          abi: contracts.weth.abi,
-          functionName: 'approve',
-          args: [contracts.debtOrderBook.address, order.collateralAmount],
-          account: address,
-        })
-
-        const hash = await walletClient.writeContract(request)
-        
-        await publicClient.waitForTransactionReceipt({ hash })
-        toast.success('WETH approved!')
+      // Format order for contract
+      const limitOrder = {
+        lender: order.lender,
+        token: contracts.usdc.address, // USDC token address
+        principalAmount: order.loanAmount,
+        collateralRequired: order.collateralAmount,
+        interestRateBips: Number(order.interestRate),
+        maturityTimestamp: order.duration, // This might need adjustment based on contract expectations
+        expiry: order.expiry,
+        nonce: order.nonce
       }
 
-      // Execute the order
       const { request } = await publicClient.simulateContract({
         address: contracts.debtOrderBook.address,
         abi: contracts.debtOrderBook.abi,
-        functionName: 'createLoanWithOrder',
-        args: [order, order.signature],
-        value: order.collateralAmount, // Send ETH as collateral
+        functionName: 'fillLimitOrder',
+        args: [limitOrder, order.signature],
         account: address,
+        value: order.collateralAmount, // ETH collateral
       })
 
       const hash = await walletClient.writeContract(request)
-      setExecuteHash(hash)
       
+      toast.success('Loan creation initiated', {
+        description: 'Transaction submitted',
+      })
+
+      // Wait for confirmation
       await publicClient.waitForTransactionReceipt({ hash })
-      toast.success('Order executed successfully!')
+      
+      toast.success('Loan created successfully!')
+      return hash
     } catch (error: any) {
-      console.error('Error executing order:', error)
-      setExecuteError(error)
-      toast.error(error.message || 'Failed to execute order')
+      console.error('Error creating loan:', error)
+      toast.error('Failed to create loan', {
+        description: error?.message || 'Unknown error'
+      })
+      return null
     } finally {
-      setIsExecuting(false)
+      setIsCreating(false)
     }
   }, [walletClient, address, publicClient])
 
-  // Cancel order
-  const [cancelHash, setCancelHash] = useState<Hash | null>(null)
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [cancelError, setCancelError] = useState<Error | null>(null)
-
-  const cancel = useCallback(async (orderHash: `0x${string}`) => {
-    if (!walletClient || !address) {
-      toast.error('Please connect your wallet')
-      return
-    }
-
-    setIsCancelling(true)
-    setCancelError(null)
-
-    try {
-      const { request } = await publicClient.simulateContract({
-        address: contracts.debtOrderBook.address,
-        abi: contracts.debtOrderBook.abi,
-        functionName: 'cancelOrder',
-        args: [orderHash],
-        account: address,
-      })
-
-      const hash = await walletClient.writeContract(request)
-      setCancelHash(hash)
-      
-      await publicClient.waitForTransactionReceipt({ hash })
-      toast.success('Order cancelled successfully!')
-    } catch (error: any) {
-      console.error('Error cancelling order:', error)
-      setCancelError(error)
-      toast.error(error.message || 'Failed to cancel order')
-    } finally {
-      setIsCancelling(false)
-    }
-  }, [walletClient, address, publicClient])
-
-  // Increment nonce (for cancelling all orders)
-  const [incrementHash, setIncrementHash] = useState<Hash | null>(null)
-  const [isIncrementing, setIsIncrementing] = useState(false)
-  const [incrementError, setIncrementError] = useState<Error | null>(null)
-
-  const cancelAllOrders = useCallback(async () => {
-    if (!walletClient || !address) {
-      toast.error('Please connect your wallet')
-      return
-    }
-
-    setIsIncrementing(true)
-    setIncrementError(null)
-
-    try {
-      const { request } = await publicClient.simulateContract({
-        address: contracts.debtOrderBook.address,
-        abi: contracts.debtOrderBook.abi,
-        functionName: 'incrementNonce',
-        account: address,
-      })
-
-      const hash = await walletClient.writeContract(request)
-      setIncrementHash(hash)
-      
-      await publicClient.waitForTransactionReceipt({ hash })
-      toast.success('All orders cancelled!')
-      // Refresh nonce
-      const newNonce = await publicClient.readContract({
-        address: contracts.debtOrderBook.address,
-        abi: contracts.debtOrderBook.abi,
-        functionName: 'nonces',
-        args: [address],
-      })
-      setNonce(newNonce as bigint)
-    } catch (error: any) {
-      console.error('Error incrementing nonce:', error)
-      setIncrementError(error)
-      toast.error(error.message || 'Failed to cancel all orders')
-    } finally {
-      setIsIncrementing(false)
-    }
-  }, [walletClient, address, publicClient])
+  // Get the next available nonce
+  const getNextNonce = useCallback(async (): Promise<bigint> => {
+    // Generate a new nonce based on timestamp and random value
+    const timestamp = BigInt(Math.floor(Date.now() / 1000))
+    const random = BigInt(Math.floor(Math.random() * 1000000))
+    return timestamp * BigInt(1000000) + random
+  }, [])
 
   return {
-    // Read functions
-    nonce,
-    isOrderExecuted,
-    
-    // Sign function
     signLoanOrder,
-    
-    // Write functions
-    execute,
-    cancel,
-    cancelAllOrders,
-    
-    // Transaction states
-    isExecuting,
-    executeHash,
-    executeError,
+    createLoanWithOrder,
+    isOrderExecuted,
+    getNextNonce,
+    currentNonce: nonce,
+    isCreating,
     isCancelling,
-    cancelHash,
-    cancelError,
-    isIncrementing,
-    incrementHash,
-    incrementError,
   }
 }

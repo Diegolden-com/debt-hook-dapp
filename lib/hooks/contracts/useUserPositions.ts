@@ -5,10 +5,11 @@ import { useDebtHook, type Loan } from './useDebtHook'
 import { usePrivyWallet } from '@/hooks/use-privy-wallet'
 import { formatUnits } from 'viem'
 import { supabase } from '@/lib/supabase'
+import { useEthPrice } from '@/hooks/use-eth-price'
 
 export interface EnrichedLoan extends Loan {
   currentDebt: bigint
-  healthFactor: bigint
+  healthFactor: number
   isLiquidatable: boolean
   remainingDays: number
   accruedInterest: bigint
@@ -17,7 +18,8 @@ export interface EnrichedLoan extends Loan {
 
 export function useUserPositions() {
   const { address } = usePrivyWallet()
-  const { getLoan, getBorrowerLoans, getLenderLoans, calculateCurrentDebt, getHealthFactor } = useDebtHook()
+  const { getLoan, calculateCurrentDebt, getHealthFactor } = useDebtHook()
+  const { price: ethPrice } = useEthPrice()
   
   const [borrowerPositions, setBorrowerPositions] = useState<EnrichedLoan[]>([])
   const [lenderPositions, setLenderPositions] = useState<EnrichedLoan[]>([])
@@ -35,32 +37,48 @@ export function useUserPositions() {
     setError(null)
 
     try {
-      // Fetch loan IDs
-      const [borrowerLoanIds, lenderLoanIds] = await Promise.all([
-        getBorrowerLoans(address),
-        getLenderLoans(address),
-      ])
+      // Fetch loans from Supabase instead of orders
+      const { data: loans, error: loansError } = await supabase
+        .from('loans')
+        .select('*')
+        .or(`lender.eq.${address},borrower.eq.${address}`)
+        .in('status', ['active', 'pending'])
+
+      if (loansError) throw loansError
+
+      if (!loans || loans.length === 0) {
+        setBorrowerPositions([])
+        setLenderPositions([])
+        return
+      }
+
+      // Separate borrower and lender loans
+      const borrowerLoans = loans.filter(loan => loan.borrower === address)
+      const lenderLoans = loans.filter(loan => loan.lender === address)
 
       // Fetch loan details for borrower positions
-      const borrowerLoans = await Promise.all(
-        borrowerLoanIds.map(async (loanId) => {
+      const borrowerPositionsList = await Promise.all(
+        borrowerLoans.map(async (dbLoan) => {
+          const loanId = `0x${dbLoan.loan_id.toString(16).padStart(64, '0')}` // Convert to bytes32
+
           const loan = await getLoan(loanId)
-          if (!loan || loan.liquidated || loan.repaidAmount === loan.loanAmount) return null
+          if (!loan || loan.status === 1 || loan.status === 2) return null // Skip repaid or liquidated
 
           const [currentDebt, healthFactor] = await Promise.all([
             calculateCurrentDebt(loanId),
-            getHealthFactor(loanId),
+            getHealthFactor(loanId, ethPrice || 2000),
           ])
 
           const enrichedLoan: EnrichedLoan = {
             ...loan,
             currentDebt,
             healthFactor,
-            isLiquidatable: healthFactor < BigInt(150), // 1.5 health factor
+            isLiquidatable: healthFactor < 150, // 1.5 health factor
             remainingDays: Math.max(0, Math.floor(
               (Number(loan.startTime + loan.duration) - Date.now() / 1000) / (24 * 60 * 60)
             )),
             accruedInterest: currentDebt - loan.loanAmount,
+            order: dbLoan,
           }
 
           return enrichedLoan
@@ -68,22 +86,25 @@ export function useUserPositions() {
       )
 
       // Fetch loan details for lender positions
-      const lenderLoans = await Promise.all(
-        lenderLoanIds.map(async (loanId) => {
+      const lenderPositionsList = await Promise.all(
+        lenderLoans.map(async (dbLoan) => {
+          const loanId = `0x${dbLoan.loan_id.toString(16).padStart(64, '0')}` // Convert to bytes32
+
           const loan = await getLoan(loanId)
-          if (!loan || loan.liquidated || loan.repaidAmount === loan.loanAmount) return null
+          if (!loan || loan.status === 1 || loan.status === 2) return null // Skip repaid or liquidated
 
           const currentDebt = await calculateCurrentDebt(loanId)
 
           const enrichedLoan: EnrichedLoan = {
             ...loan,
             currentDebt,
-            healthFactor: BigInt(0), // Not relevant for lenders
+            healthFactor: 0, // Not relevant for lenders
             isLiquidatable: false,
             remainingDays: Math.max(0, Math.floor(
               (Number(loan.startTime + loan.duration) - Date.now() / 1000) / (24 * 60 * 60)
             )),
             accruedInterest: currentDebt - loan.loanAmount,
+            order: dbLoan,
           }
 
           return enrichedLoan
@@ -91,8 +112,8 @@ export function useUserPositions() {
       )
 
       // Filter out null values and set state
-      setBorrowerPositions(borrowerLoans.filter((loan): loan is EnrichedLoan => loan !== null))
-      setLenderPositions(lenderLoans.filter((loan): loan is EnrichedLoan => loan !== null))
+      setBorrowerPositions(borrowerPositionsList.filter((loan): loan is EnrichedLoan => loan !== null))
+      setLenderPositions(lenderPositionsList.filter((loan): loan is EnrichedLoan => loan !== null))
 
     } catch (err) {
       console.error('Error fetching positions:', err)
@@ -100,31 +121,11 @@ export function useUserPositions() {
     } finally {
       setIsLoading(false)
     }
-  }, [address, getLoan, getBorrowerLoans, getLenderLoans, calculateCurrentDebt, getHealthFactor])
-
-  // Fetch orders from Supabase for additional metadata
-  const fetchOrderMetadata = useCallback(async () => {
-    if (!address) return
-
-    try {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('*')
-        .or(`lender.eq.${address},borrower.eq.${address}`)
-        .eq('status', 'filled')
-
-      // Match orders with loans
-      // This is a simplified approach - in production you'd need a better way to link orders to loans
-      // For now, we'll skip this step
-    } catch (err) {
-      console.error('Error fetching order metadata:', err)
-    }
-  }, [address])
+  }, [address, getLoan, calculateCurrentDebt, getHealthFactor, ethPrice])
 
   useEffect(() => {
     fetchPositions()
-    fetchOrderMetadata()
-  }, [fetchPositions, fetchOrderMetadata])
+  }, [fetchPositions])
 
   // Calculate portfolio stats
   const calculateStats = useCallback(() => {

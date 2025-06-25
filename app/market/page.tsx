@@ -18,7 +18,7 @@ import type { Address } from "viem"
 export default function MarketPage() {
   const [selectedOffer, setSelectedOffer] = useState<any>(null)
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
-  const { execute, isExecuting } = useDebtOrderBook()
+  const { createLoanWithOrder, isCreating } = useDebtOrderBook()
 
   // Use a default term for the trading panel, but the OrderBook manages its own term
   const { bestBid, bestAsk, createOrder, fillOrder } = useRealtimeOrderbook("30") // Default to 30 days for trading panel

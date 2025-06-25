@@ -21,8 +21,8 @@ interface PositionsTabProps {
   lenderPositions: EnrichedLoan[]
   ethPrice: number
   isLoading: boolean
-  onRepay: (loanId: bigint, amount: bigint) => Promise<void>
-  onLiquidate: (loanId: bigint) => Promise<void>
+  onRepay: (loanId: string, amount: bigint) => Promise<void>
+  onLiquidate: (loanId: string) => Promise<void>
   isRepaying: boolean
   isLiquidating: boolean
 }
@@ -37,17 +37,15 @@ export function PositionsTab({
   isRepaying,
   isLiquidating,
 }: PositionsTabProps) {
-  const getHealthColor = (healthFactor: bigint) => {
-    const factor = Number(healthFactor) / 100
-    if (factor >= 1.5) return "text-green-600"
-    if (factor >= 1.2) return "text-yellow-600"
+  const getHealthColor = (healthFactor: number) => {
+    if (healthFactor >= 150) return "text-green-600"
+    if (healthFactor >= 120) return "text-yellow-600"
     return "text-red-600"
   }
 
-  const getHealthBadgeVariant = (healthFactor: bigint) => {
-    const factor = Number(healthFactor) / 100
-    if (factor >= 1.5) return "default"
-    if (factor >= 1.2) return "secondary"
+  const getHealthBadgeVariant = (healthFactor: number) => {
+    if (healthFactor >= 150) return "default"
+    if (healthFactor >= 120) return "secondary"
     return "destructive"
   }
 
@@ -221,7 +219,7 @@ export function PositionsTab({
                           {Math.floor(Number(position.duration) / (24 * 60 * 60))}D
                         </div>
                       </div>
-                      <Badge variant={position.isLiquidatable ? "destructive" : getHealthBadgeVariant(position.healthFactor)}>
+                      <Badge variant={position.isLiquidatable ? "destructive" : getHealthBadgeVariant(healthFactor)}>
                         {position.isLiquidatable ? "AT RISK" : `Health: ${healthFactor.toFixed(1)}`}
                       </Badge>
                     </div>

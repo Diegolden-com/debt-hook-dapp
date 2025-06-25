@@ -9,6 +9,89 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      loans: {
+        Row: {
+          borrower: string
+          collateral_amount: number
+          collateral_token: string
+          created_at: string | null
+          creation_tx_hash: string
+          duration: number
+          end_time: number
+          id: string
+          lender: string
+          liquidated_at: string | null
+          liquidation_tx_hash: string | null
+          loan_amount: number
+          loan_id: number
+          loan_token: string
+          order_id: string | null
+          rate_per_second: number
+          repaid_at: string | null
+          repayment_tx_hash: string | null
+          start_time: number
+          status: string | null
+          total_debt: number
+          updated_at: string | null
+        }
+        Insert: {
+          borrower: string
+          collateral_amount: number
+          collateral_token: string
+          created_at?: string | null
+          creation_tx_hash: string
+          duration: number
+          end_time: number
+          id?: string
+          lender: string
+          liquidated_at?: string | null
+          liquidation_tx_hash?: string | null
+          loan_amount: number
+          loan_id: number
+          loan_token: string
+          order_id?: string | null
+          rate_per_second: number
+          repaid_at?: string | null
+          repayment_tx_hash?: string | null
+          start_time: number
+          status?: string | null
+          total_debt: number
+          updated_at?: string | null
+        }
+        Update: {
+          borrower?: string
+          collateral_amount?: number
+          collateral_token?: string
+          created_at?: string | null
+          creation_tx_hash?: string
+          duration?: number
+          end_time?: number
+          id?: string
+          lender?: string
+          liquidated_at?: string | null
+          liquidation_tx_hash?: string | null
+          loan_amount?: number
+          loan_id?: number
+          loan_token?: string
+          order_id?: string | null
+          rate_per_second?: number
+          repaid_at?: string | null
+          repayment_tx_hash?: string | null
+          start_time?: number
+          status?: string | null
+          total_debt?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "signed_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount: number
@@ -47,6 +130,63 @@ export type Database = {
           status?: string | null
           term?: number
           type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      signed_orders: {
+        Row: {
+          borrower: string | null
+          collateral_amount: string
+          collateral_token: string
+          created_at: string | null
+          duration: number
+          expiry: number
+          id: string
+          lender: string
+          loan_amount: string
+          loan_token: string
+          nonce: number
+          order_hash: string
+          rate_per_second: string
+          signature: Json
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          borrower?: string | null
+          collateral_amount: string
+          collateral_token: string
+          created_at?: string | null
+          duration: number
+          expiry: number
+          id?: string
+          lender: string
+          loan_amount: string
+          loan_token: string
+          nonce: number
+          order_hash: string
+          rate_per_second: string
+          signature: Json
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          borrower?: string | null
+          collateral_amount?: string
+          collateral_token?: string
+          created_at?: string | null
+          duration?: number
+          expiry?: number
+          id?: string
+          lender?: string
+          loan_amount?: string
+          loan_token?: string
+          nonce?: number
+          order_hash?: string
+          rate_per_second?: string
+          signature?: Json
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: []

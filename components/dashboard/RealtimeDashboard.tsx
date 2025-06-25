@@ -161,7 +161,7 @@ export function RealtimeDashboard() {
                           {formatEther(BigInt(loan.collateral_amount))} ETH collateral
                         </div>
                       </div>
-                      <StatusBadge status={loan.status} />
+                      <StatusBadge status={loan.status || 'active'} />
                     </div>
                   ))}
                 </div>
@@ -246,7 +246,7 @@ export function RealtimeDashboard() {
                           {formatEther(BigInt(loan.collateral_amount))} ETH collateral
                         </div>
                       </div>
-                      <StatusBadge status={loan.status} />
+                      <StatusBadge status={loan.status || 'active'} />
                     </div>
                   ))}
                 </div>
