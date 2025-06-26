@@ -6,31 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 This is the Next.js frontend for the DebtHook protocol, providing a user interface for decentralized lending with Uniswap v4 integration. The app enables users to create loan offers, accept loans, and manage their positions.
 
-## Current Development Focus
+## Current Status (June 26, 2025)
 
-### Immediate Priorities
-1. **Complete Unichain Sepolia Integration**
-   - Update chain configuration for Unichain Sepolia
-   - Configure correct RPC endpoints and block explorer
-   - Test wallet connections on target network
+### ✅ Deployed Contracts
+The frontend is now connected to the fully deployed protocol:
 
-2. **Contract Integration Updates**
-   - Ensure ABIs match latest contract changes
-   - Update contract addresses after deployment
-   - Test all contract interactions thoroughly
+#### Unichain Sepolia
+- **DebtHook**: `0x49e39eFDE0C93F6601d84cb5C6D24c1B23eB00C8` (with operator authorization)
+- **DebtOrderBook**: `0xce060483D67b054cACE5c90001992085b46b4f66`
+- **USDC**: `0x73CFC55f831b5DD6E5Ee4CEF02E8c05be3F069F6`
 
-3. **User Experience Polish**
-   - Add loading states for all async operations
-   - Improve error messages with actionable steps
-   - Optimize for mobile responsive design
+#### Ethereum Sepolia
+- **ServiceManager**: `0x3333Bc77EdF180D81ff911d439F02Db9e34e8603`
 
-### Testing Checklist
-- [ ] Loan offer creation flow
-- [ ] Order signing with EIP-712
-- [ ] Loan acceptance transaction
-- [ ] Position monitoring on dashboard
-- [ ] Loan repayment process
-- [ ] Real-time updates via Supabase
+### Testing Priorities
+- [x] Unichain Sepolia integration complete
+- [x] Contract addresses updated
+- [ ] Test loan offer creation flow
+- [ ] Test EigenLayer AVS order submission
+- [ ] Test batch loan matching
+- [ ] Verify real-time updates via Supabase
 
 ## Tech Stack
 
@@ -135,15 +130,18 @@ NEXT_PUBLIC_PRIVY_APP_ID=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
-# Contracts
-NEXT_PUBLIC_DEBT_HOOK_ADDRESS=
-NEXT_PUBLIC_DEBT_ORDER_BOOK_ADDRESS=
-NEXT_PUBLIC_USDC_ADDRESS=
-NEXT_PUBLIC_WETH_ADDRESS=
+# Contracts (Unichain Sepolia)
+NEXT_PUBLIC_DEBT_HOOK_ADDRESS=0x49e39eFDE0C93F6601d84cb5C6D24c1B23eB00C8
+NEXT_PUBLIC_DEBT_ORDER_BOOK_ADDRESS=0xce060483D67b054cACE5c90001992085b46b4f66
+NEXT_PUBLIC_USDC_ADDRESS=0x73CFC55f831b5DD6E5Ee4CEF02E8c05be3F069F6
+NEXT_PUBLIC_WETH_ADDRESS=0x0000000000000000000000000000000000000000
+
+# EigenLayer (Ethereum Sepolia)
+NEXT_PUBLIC_SERVICE_MANAGER_ADDRESS=0x3333Bc77EdF180D81ff911d439F02Db9e34e8603
 
 # Network
-NEXT_PUBLIC_CHAIN_ID=
-NEXT_PUBLIC_RPC_URL=
+NEXT_PUBLIC_CHAIN_ID=1301
+NEXT_PUBLIC_RPC_URL=https://sepolia.unichain.org
 ```
 
 ## Development Guidelines
@@ -220,13 +218,13 @@ When implementing the USDC paymaster:
 4. Add UI elements showing gas payment in USDC
 5. Handle paymaster approval flows
 
-### Phase C: Eigenlayer Integration
-For verifiable orderbook:
-1. Add orderbook verification status indicators
-2. Show proof data for verified orders
-3. Implement operator reputation display
-4. Add slashing event notifications
-5. Create trust score visualizations
+### Phase C: EigenLayer Integration ✅ READY TO TEST
+The EigenLayer AVS is now deployed and operational:
+1. Add "Submit to AVS" option in order creation
+2. Show batch matching status for orders
+3. Display operator verification badges
+4. Add notifications for matched orders
+5. Show estimated wait time for batch execution
 
 ## Troubleshooting Common Issues
 
