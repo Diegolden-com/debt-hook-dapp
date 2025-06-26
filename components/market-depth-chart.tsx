@@ -94,7 +94,7 @@ export function MarketDepthChart({ orderBook, selectedTerm, isLoading }: MarketD
   }, [orderBook])
 
   const combinedData = useMemo(() => {
-    const allRates = [...chartData.supplyData.map((d) => d.rate), ...chartData.demandData.map((d) => d.rate)].sort(
+    const allRates = [...new Set([...chartData.supplyData.map((d) => d.rate), ...chartData.demandData.map((d) => d.rate)])].sort(
       (a, b) => a - b,
     )
     return allRates.map((rate) => {
