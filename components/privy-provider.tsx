@@ -15,6 +15,8 @@ export default function PrivyProvider({ children }: { children: React.ReactNode 
       <BasePrivyProvider
         appId={appId}
         config={{
+          // Note: Smart wallets for EIP-4337 are configured in Privy Dashboard
+          // Enable paymaster URL in dashboard settings for gasless transactions
           embeddedWallets: {
             createOnLogin: "all-users",
           },

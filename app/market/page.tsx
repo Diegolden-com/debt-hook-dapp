@@ -12,6 +12,7 @@ import { AlertTriangle, CheckCircle } from "lucide-react"
 import { useEthPrice } from "@/hooks/use-eth-price"
 import { useRealtimeOrderbook } from "@/hooks/use-realtime-orderbook"
 import { useDebtOrderBook, type SignedLoanOrder } from "@/lib/hooks/contracts"
+import { usePrivyWallet } from "@/hooks/use-privy-wallet"
 import { toast } from "sonner"
 import type { Address } from "viem"
 
@@ -20,6 +21,7 @@ export default function MarketPage() {
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const { price: ethPrice, isLoading: isPriceLoading } = useEthPrice()
   const { createLoanWithOrder, isCreating } = useDebtOrderBook()
+  const { address } = usePrivyWallet()
 
   // Use a default term for the trading panel, but the OrderBook manages its own term
   const { bestBid, bestAsk, createOrder, fillOrder, isLoading: isOrderbookLoading } = useRealtimeOrderbook("30") // Default to 30 days for trading panel
@@ -66,7 +68,7 @@ export default function MarketPage() {
       }
 
       // Execute the order on-chain
-      await createLoanWithOrder(signedOrder)
+      await createLoanWithOrder(signedOrder, address!)
       
       // Update order status in database
       await fillOrder(offer.id)
@@ -212,7 +214,6 @@ export default function MarketPage() {
           </Dialog>
             )}
           </>
-        )}
         )}
       </div>
     </div>

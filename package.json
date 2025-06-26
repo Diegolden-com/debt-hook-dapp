@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "lint": "next lint",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "generate-types": "supabase gen types typescript --project-id obytincphmccrwspkvns > types/database.ts"
   },
   "dependencies": {
+    "@circle-fin/modular-wallets-core": "^1.0.9",
     "@hookform/resolvers": "^3.9.1",
     "@privy-io/react-auth": "2.2.0",
     "@privy-io/server-auth": "1.18.4",
@@ -52,6 +53,7 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "latest",
+    "permissionless": "^0.2.47",
     "react": "^19",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",

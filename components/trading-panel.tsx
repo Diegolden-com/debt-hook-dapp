@@ -14,8 +14,10 @@ import { useEthPrice } from "@/hooks/use-eth-price"
 import { usePrivyWallet } from "@/hooks/use-privy-wallet"
 import { usePrivy } from "@privy-io/react-auth"
 import { useDebtOrderBook } from "@/lib/hooks/contracts"
+import { useGaslessTransaction } from "@/hooks/use-gasless-transaction"
 import { parseUnits } from "viem"
 import { toast } from "sonner"
+import { Switch } from "@/components/ui/switch"
 
 interface TradingPanelProps {
   bestBid: number
@@ -30,6 +32,10 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
   const { address, isConnected } = usePrivyWallet()
   const { login } = usePrivy()
   const { signLoanOrder } = useDebtOrderBook()
+  const { checkUSDCBalance } = useGaslessTransaction()
+  
+  // Gasless transaction state
+  const [useUSDCForGas, setUseUSDCForGas] = useState(false)
 
   // Lending form state
   const [lendingForm, setLendingForm] = useState({
@@ -93,7 +99,7 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
         return
       }
       
-      // Create order data for Supabase
+      // Create order data for Supabase orders table
       const orderData = {
         type: "bid" as const,
         rate: Number.parseFloat(lendingForm.interestRate),
@@ -102,15 +108,17 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
         lender: address,
         max_ltv: Number.parseInt(lendingForm.maxLtv),
         status: "active" as const,
-        // Add contract fields
-        signature: signedOrder.signature,
-        collateral_amount: collateralAmount.toString(),
-        loan_amount: loanAmount.toString(),
-        interest_rate_bps: interestRate.toString(),
-        duration_seconds: duration.toString(),
-        expiry_timestamp: expiry.toString(),
-        nonce: signedOrder.nonce.toString(),
+        useUSDCForGas: useUSDCForGas, // Pass gasless option
       }
+      
+      // TODO: Also create signed_orders entry with contract fields:
+      // signature: signedOrder.signature,
+      // collateral_amount: collateralAmount.toString(),
+      // loan_amount: loanAmount.toString(),
+      // interest_rate_bps: interestRate.toString(),
+      // duration_seconds: duration.toString(),
+      // expiry_timestamp: expiry.toString(),
+      // nonce: signedOrder.nonce.toString(),
       
       await onCreateOrder(orderData)
       toast.success("Lending offer created successfully!")
@@ -308,6 +316,26 @@ export function TradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOrder }: T
                   Your lending offer will be visible to all users. You&apos;ll earn interest when someone borrows against it.
                 </AlertDescription>
               </Alert>
+
+              {/* Gasless transaction option */}
+              <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <div>
+                    <Label htmlFor="gasless-switch" className="text-sm font-medium cursor-pointer">
+                      Pay gas fees with USDC
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      No ETH needed - gas paid from your USDC balance
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="gasless-switch"
+                  checked={useUSDCForGas}
+                  onCheckedChange={setUseUSDCForGas}
+                />
+              </div>
 
               <Button onClick={handleLendingSubmit} className="w-full" disabled={!isLendingFormValid || isPriceLoading}>
                 <DollarSign className="mr-2 h-4 w-4" />

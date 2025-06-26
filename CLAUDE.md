@@ -6,6 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 This is the Next.js frontend for the DebtHook protocol, providing a user interface for decentralized lending with Uniswap v4 integration. The app enables users to create loan offers, accept loans, and manage their positions.
 
+## Current Development Focus
+
+### Immediate Priorities
+1. **Complete Unichain Sepolia Integration**
+   - Update chain configuration for Unichain Sepolia
+   - Configure correct RPC endpoints and block explorer
+   - Test wallet connections on target network
+
+2. **Contract Integration Updates**
+   - Ensure ABIs match latest contract changes
+   - Update contract addresses after deployment
+   - Test all contract interactions thoroughly
+
+3. **User Experience Polish**
+   - Add loading states for all async operations
+   - Improve error messages with actionable steps
+   - Optimize for mobile responsive design
+
+### Testing Checklist
+- [ ] Loan offer creation flow
+- [ ] Order signing with EIP-712
+- [ ] Loan acceptance transaction
+- [ ] Position monitoring on dashboard
+- [ ] Loan repayment process
+- [ ] Real-time updates via Supabase
+
 ## Tech Stack
 
 - **Framework**: Next.js 14 with App Router
@@ -169,7 +195,54 @@ NEXT_PUBLIC_RPC_URL=
 
 ## Deployment
 
-- Deploy to Vercel or similar platform
-- Set environment variables in deployment
+### Vercel Deployment
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### Environment Setup
+- Set all environment variables in Vercel dashboard
 - Enable Supabase Row Level Security
-- Configure proper domain and SSL
+- Configure custom domain with SSL
+- Set up monitoring (Vercel Analytics recommended)
+
+## Future Enhancements (Aligned with Protocol Roadmap)
+
+### Phase B: USDC Paymaster Integration
+When implementing the USDC paymaster:
+1. Add Smart Wallet SDK (Biconomy/Gelato)
+2. Create PaymasterContext provider
+3. Update transaction builders to use paymaster
+4. Add UI elements showing gas payment in USDC
+5. Handle paymaster approval flows
+
+### Phase C: Eigenlayer Integration
+For verifiable orderbook:
+1. Add orderbook verification status indicators
+2. Show proof data for verified orders
+3. Implement operator reputation display
+4. Add slashing event notifications
+5. Create trust score visualizations
+
+## Troubleshooting Common Issues
+
+### Wallet Connection Issues
+- Clear Privy cache: `localStorage.clear()`
+- Check chain ID matches deployment
+- Verify RPC endpoint is responsive
+
+### Transaction Failures
+- Check user has sufficient balance
+- Verify contract addresses are correct
+- Ensure proper token approvals
+- Check gas estimation isn't failing
+
+### Supabase Real-time Issues
+- Verify anon key has proper permissions
+- Check Row Level Security policies
+- Ensure WebSocket connections aren't blocked
+- Monitor Supabase dashboard for errors
