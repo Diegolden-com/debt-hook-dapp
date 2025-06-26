@@ -1,48 +1,65 @@
-import { useState, useCallback } from 'react'
-import { 
-  useAccount, 
-  useWalletClient, 
-  usePublicClient,
-  useReadContract
-} from 'wagmi'
+import { useState, useCallback, useEffect } from 'react'
 import { 
   type Address, 
   type Hex,
   parseUnits,
-  formatUnits
+  formatUnits,
+  createPublicClient,
+  http
 } from 'viem'
+import { baseSepolia } from 'viem/chains'
 import { toast } from 'sonner'
 import { 
   preparePaymasterData,
   estimateGasCostInUSDC,
   PAYMASTER_CONFIG
 } from '@/lib/paymaster/usdc-paymaster'
+import { usePrivyWallet } from '@/hooks/use-privy-wallet'
 
 // Current ETH price in USDC (should come from oracle in production)
-const ETH_PRICE_USDC = 3000_000000n // $3000 with 6 decimals
+const ETH_PRICE_USDC = BigInt(3000_000000) // $3000 with 6 decimals
 
 export function usePaymaster() {
-  const { address } = useAccount()
-  const { data: walletClient } = useWalletClient()
-  const publicClient = usePublicClient()
+  const { address, walletClient } = usePrivyWallet()
   const [isPreparingPaymaster, setIsPreparingPaymaster] = useState(false)
+  const [usdcBalance, setUsdcBalance] = useState<bigint | null>(null)
+  
+  const publicClient = createPublicClient({
+    chain: baseSepolia,
+    transport: http()
+  })
   
   // Read user's USDC balance
-  const { data: usdcBalance } = useReadContract({
-    address: PAYMASTER_CONFIG.usdcAddress,
-    abi: [
-      {
-        name: 'balanceOf',
-        type: 'function',
-        stateMutability: 'view',
-        inputs: [{ name: 'owner', type: 'address' }],
-        outputs: [{ name: '', type: 'uint256' }]
+  useEffect(() => {
+    async function fetchBalance() {
+      if (!address) {
+        setUsdcBalance(null)
+        return
       }
-    ],
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    enabled: !!address
-  })
+      
+      try {
+        const balance = await publicClient.readContract({
+          address: PAYMASTER_CONFIG.usdcAddress,
+          abi: [
+            {
+              name: 'balanceOf',
+              type: 'function',
+              stateMutability: 'view',
+              inputs: [{ name: 'owner', type: 'address' }],
+              outputs: [{ name: '', type: 'uint256' }]
+            }
+          ],
+          functionName: 'balanceOf',
+          args: [address]
+        })
+        setUsdcBalance(balance as bigint)
+      } catch (error) {
+        console.error('Error fetching USDC balance:', error)
+      }
+    }
+    
+    fetchBalance()
+  }, [address, publicClient])
 
   // Check if user has enough USDC for gas
   const hasEnoughUSDCForGas = useCallback((estimatedCost: bigint): boolean => {
@@ -59,7 +76,7 @@ export function usePaymaster() {
       // If maxFeePerGas not provided, estimate it
       if (!maxFeePerGas && publicClient) {
         const feeData = await publicClient.estimateFeesPerGas()
-        maxFeePerGas = feeData.maxFeePerGas || 0n
+        maxFeePerGas = feeData.maxFeePerGas || BigInt(0)
       }
 
       if (!maxFeePerGas) {

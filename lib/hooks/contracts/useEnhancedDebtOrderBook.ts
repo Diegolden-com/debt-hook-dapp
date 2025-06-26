@@ -52,6 +52,7 @@ export function useEnhancedDebtOrderBook() {
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmittingToAVS, setIsSubmittingToAVS] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [serviceManager, setServiceManager] = useState<Address | null>(null)
   
   const publicClient = createPublicClient({
     chain,
@@ -64,6 +65,7 @@ export function useEnhancedDebtOrderBook() {
     const random = BigInt(Math.floor(Math.random() * 1000000))
     setNonce(timestamp * BigInt(1000000) + random)
   }, [])
+
 
   // Check if order has been executed
   const isOrderExecuted = useCallback(async (nonce: bigint): Promise<boolean> => {
@@ -329,6 +331,15 @@ export function useEnhancedDebtOrderBook() {
     }
   }, [publicClient])
 
+  // Fetch service manager on mount
+  useEffect(() => {
+    async function fetchServiceManager() {
+      const manager = await getServiceManager()
+      setServiceManager(manager)
+    }
+    fetchServiceManager()
+  }, [getServiceManager])
+
   return {
     // Original functions
     signLoanOrder,
@@ -344,5 +355,9 @@ export function useEnhancedDebtOrderBook() {
     submitBorrowerOrderToAVS,
     isSubmittingToAVS,
     getServiceManager,
+    
+    // Additional properties for compatibility
+    isSubmitting: isSubmittingToAVS || isCreating,
+    serviceManager,
   }
 }

@@ -24,7 +24,8 @@ export function useRealtimeOrderbook(selectedTerm: string) {
       }
       setError(null)
 
-      const { data: orders, error: fetchError } = await supabase
+      // First fetch orders
+      const { data: ordersData, error: fetchError } = await supabase
         .from("orders")
         .select("*")
         .eq("term", Number(selectedTerm) as 30 | 90 | 180)
@@ -32,6 +33,33 @@ export function useRealtimeOrderbook(selectedTerm: string) {
         .order("rate", { ascending: true })
 
       if (fetchError) throw fetchError
+
+      // Then fetch corresponding signed orders
+      const orderIds = ordersData?.map(o => o.id) || []
+      const { data: signedOrdersData, error: signedError } = await supabase
+        .from("signed_orders")
+        .select("*")
+        .in("id", orderIds)
+
+      if (signedError) {
+        console.error("Error fetching signed orders:", signedError)
+      }
+
+      // Merge the data
+      const orders = ordersData?.map(order => {
+        const signedOrder = signedOrdersData?.find(so => so.id === order.id)
+        return {
+          ...order,
+          // Add signed order fields if found
+          signature: signedOrder?.signature,
+          collateral_amount: signedOrder?.collateral_amount,
+          loan_amount: signedOrder?.loan_amount, 
+          interest_rate_bips: signedOrder?.interest_rate_bips,
+          duration_seconds: signedOrder?.duration,
+          expiry_timestamp: signedOrder?.expiry,
+          nonce: signedOrder?.nonce
+        }
+      }) || []
 
       // Separate bids and asks
       const bids = orders?.filter((order) => order.type === "bid") || []
