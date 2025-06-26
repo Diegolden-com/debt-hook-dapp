@@ -51,17 +51,17 @@ export function useEnhancedOrderBook(selectedTerm: string) {
         const batchData: BatchStatusSummary | null = null
         const batchError = null
 
-        if (batchError && batchError.code !== "PGRST116") {
+        if (batchError && typeof batchError === 'object' && 'code' in batchError && (batchError as any).code !== "PGRST116") {
           console.error("Batch fetch error:", batchError)
         }
 
-        if (batchData) {
+        if (batchData && batchData !== null) {
           setCurrentBatch({
-            batchNumber: batchData.batch_number,
-            status: batchData.status,
+            batchNumber: (batchData as any).batch_number,
+            status: (batchData as any).status,
             estimatedExecutionTime: new Date(Date.now() + 30 * 60 * 1000), // 30 min from now
-            totalOrders: batchData.total_orders || 0,
-            matchedPairs: batchData.matched_pairs || 0,
+            totalOrders: (batchData as any).total_orders || 0,
+            matchedPairs: (batchData as any).matched_pairs || 0,
           })
         }
 
@@ -84,12 +84,12 @@ export function useEnhancedOrderBook(selectedTerm: string) {
           })
 
           const batchOrdersData: BatchOrder[] = filteredOrders.map(order => ({
-            orderId: order.order_id,
-            avsStatus: order.avs_status,
-            matchedRate: order.matched_rate,
-            matchedAmount: order.matched_amount,
-            isFullyMatched: order.is_fully_matched,
-            batchId: order.current_batch_id,
+            orderId: order.order_id || '',
+            avsStatus: (order.avs_status || 'none') as any,
+            matchedRate: order.matched_rate || undefined,
+            matchedAmount: order.matched_amount || undefined,
+            isFullyMatched: order.is_fully_matched || undefined,
+            batchId: order.current_batch_id || undefined,
           }))
 
           setBatchOrders(batchOrdersData)

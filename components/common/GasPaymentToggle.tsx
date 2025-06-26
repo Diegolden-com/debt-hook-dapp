@@ -46,7 +46,7 @@ export function GasPaymentToggle({
           id="gas-payment"
           checked={enabled}
           onCheckedChange={onToggle}
-          disabled={!usdcBalance || (usdcBalance && usdcBalance === BigInt(0))}
+          disabled={!usdcBalance || usdcBalance === BigInt(0)}
         />
         <div className="space-y-1">
           <Label 

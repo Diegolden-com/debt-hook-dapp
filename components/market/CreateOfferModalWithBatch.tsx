@@ -58,18 +58,30 @@ export function CreateOfferModalWithBatch() {
       const maturityTimestamp = BigInt(Math.floor(Date.now() / 1000) + Number(duration) * 24 * 60 * 60)
       const expiry = BigInt(Math.floor(Date.now() / 1000) + 24 * 60 * 60) // 24 hours
       
-      // Prepare base order parameters
+      // Prepare order parameters with required SignedLoanOrder fields
+      const collateralAmount = parseUnits((Number(amount) * 1.5).toString(), 18) // 150% LTV
+      const avgRate = (Number(minRate) + Number(maxRate)) / 2
+      const interestRate = BigInt(Math.round(avgRate * 100)) // Convert to basis points
+      
       const orderParams = {
-        principalAmount,
-        minRate: Number(minRate),
-        maxRate: Number(maxRate),
-        maturityTimestamp,
-        expiry
+        lender: address as `0x${string}`,
+        collateralAmount,
+        loanAmount: principalAmount,
+        interestRate,
+        duration: BigInt(Number(duration) * 24 * 60 * 60), // Convert days to seconds
+        expiry,
+        nonce: BigInt(Date.now()), // Use timestamp as nonce
+        signature: '0x' as `0x${string}`, // Will be filled by createOrder
+        // Additional fields for CreateOrderParams
+        term: duration,
+        rate: avgRate.toString(),
+        amount,
+        ltv: '150',
+        useGaslessTransaction: useUSDCForGas
       }
 
       if (executionMode === 'direct') {
         // Direct execution flow (existing behavior)
-        let paymasterData = null
         if (useUSDCForGas) {
           const estimatedGasLimit = 150_000n
           const gasCostUSDC = await estimateGasCost(estimatedGasLimit)
@@ -80,12 +92,9 @@ export function CreateOfferModalWithBatch() {
             )
             return
           }
-
-          paymasterData = await preparePaymaster(estimatedGasLimit)
-          if (!paymasterData) return
         }
 
-        await createOrder(orderParams, paymasterData)
+        await createOrder(orderParams)
         toast.success('Loan offer created successfully!')
       } else {
         // Batch execution flow
@@ -95,11 +104,10 @@ export function CreateOfferModalWithBatch() {
         }
 
         // First create the signed order
-        const signedOrder = await createOrder(orderParams, null, true) // true flag for batch mode
+        const result = await createOrder(orderParams)
         
         // Then submit to AVS
-        await submitOrderToAVS({
-          order: signedOrder,
+        await submitOrderToAVS(orderParams, {
           minPrincipal: parseUnits(minPrincipal || amount, 6),
           maxPrincipal: parseUnits(maxPrincipal || amount, 6),
           minRate: BigInt(Math.round(Number(minRate) * 100)), // Convert to basis points

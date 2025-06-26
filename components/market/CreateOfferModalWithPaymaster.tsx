@@ -19,8 +19,10 @@ import { useCreateOrder } from '@/lib/hooks/useCreateOrder'
 import { parseUnits, formatUnits } from 'viem'
 import { toast } from 'sonner'
 import { usePaymaster } from '@/hooks/usePaymaster'
+import { usePrivyWallet } from '@/hooks/use-privy-wallet'
 
 export function CreateOfferModalWithPaymaster() {
+  const { address } = usePrivyWallet()
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [minRate, setMinRate] = useState('')
@@ -45,17 +47,28 @@ export function CreateOfferModalWithPaymaster() {
       const maturityTimestamp = BigInt(Math.floor(Date.now() / 1000) + Number(duration) * 24 * 60 * 60)
       const expiry = BigInt(Math.floor(Date.now() / 1000) + 24 * 60 * 60) // 24 hours
       
-      // Prepare order parameters
+      // Prepare order parameters with required SignedLoanOrder fields
+      const collateralAmount = parseUnits((Number(amount) * 1.5).toString(), 18) // 150% LTV
+      const interestRate = BigInt(Math.round((Number(minRate) + Number(maxRate)) / 2 * 100)) // Average rate in basis points
+      
       const orderParams = {
-        principalAmount,
-        minRate: Number(minRate),
-        maxRate: Number(maxRate),
-        maturityTimestamp,
-        expiry
+        lender: address as `0x${string}`,
+        collateralAmount,
+        loanAmount: principalAmount,
+        interestRate,
+        duration: BigInt(Number(duration) * 24 * 60 * 60), // Convert days to seconds
+        expiry,
+        nonce: BigInt(Date.now()), // Use timestamp as nonce
+        signature: '0x' as `0x${string}`, // Will be filled by createOrder
+        // Additional fields for CreateOrderParams
+        term: duration,
+        rate: ((Number(minRate) + Number(maxRate)) / 2).toString(),
+        amount,
+        ltv: '150',
+        useGaslessTransaction: useUSDCForGas
       }
 
       // Handle USDC gas payment if enabled
-      let paymasterData = null
       if (useUSDCForGas) {
         // Estimate gas for creating an order (approximately 150k gas)
         const estimatedGasLimit = 150_000n
@@ -68,14 +81,10 @@ export function CreateOfferModalWithPaymaster() {
           )
           return
         }
-
-        // Prepare paymaster data
-        paymasterData = await preparePaymaster(estimatedGasLimit)
-        if (!paymasterData) return
       }
 
       // Create the order
-      await createOrder(orderParams, paymasterData)
+      await createOrder(orderParams)
       
       // Reset form and close modal
       setAmount('')

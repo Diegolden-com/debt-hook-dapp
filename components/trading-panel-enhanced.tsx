@@ -136,8 +136,7 @@ export function EnhancedTradingPanel({ bestBid, bestAsk, onCreateOrder, onTakeOr
         toast.success("Lending offer created successfully!")
       } else {
         // Batch execution - submit to AVS
-        await submitOrderToAVS({
-          order: signedOrder,
+        await submitOrderToAVS(signedOrder, {
           minPrincipal: parseUnits(lendingForm.minPrincipal || lendingForm.usdcAmount, 6),
           maxPrincipal: parseUnits(lendingForm.maxPrincipal || lendingForm.usdcAmount, 6),
           minRate: BigInt(Math.round(Number(lendingForm.minRate || lendingForm.interestRate) * 100)),
