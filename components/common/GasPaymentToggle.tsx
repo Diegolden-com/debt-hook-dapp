@@ -22,7 +22,7 @@ interface GasPaymentToggleProps {
 export function GasPaymentToggle({ 
   enabled, 
   onToggle,
-  estimatedGasLimit = 200_000n // Default gas estimate
+  estimatedGasLimit = BigInt(200000) // Default gas estimate
 }: GasPaymentToggleProps) {
   const { usdcBalance, estimateGasCost } = usePaymaster()
   const [estimatedCost, setEstimatedCost] = useState<bigint | null>(null)
@@ -46,7 +46,7 @@ export function GasPaymentToggle({
           id="gas-payment"
           checked={enabled}
           onCheckedChange={onToggle}
-          disabled={!usdcBalance || (usdcBalance && usdcBalance === 0n)}
+          disabled={!usdcBalance || (usdcBalance && usdcBalance === BigInt(0))}
         />
         <div className="space-y-1">
           <Label 

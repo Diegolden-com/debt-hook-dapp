@@ -32,6 +32,7 @@ interface MarketDepthChartProps {
   }
   selectedTerm: string // Kept for potential internal use, though title is removed
   isLoading: boolean
+  batchOrders?: any[] // Optional batch orders for highlighting
 }
 
 export function MarketDepthChart({ orderBook, selectedTerm, isLoading }: MarketDepthChartProps) {

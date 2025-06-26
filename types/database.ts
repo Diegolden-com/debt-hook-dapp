@@ -9,6 +9,235 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      batch_orders: {
+        Row: {
+          batch_id: string
+          created_at: string | null
+          id: string
+          is_fully_matched: boolean | null
+          matched_amount: number | null
+          matched_counterparty_order_id: string | null
+          matched_rate: number | null
+          matching_score: number | null
+          order_id: string
+          order_type: string
+          requested_amount: number
+          requested_rate: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string | null
+          id?: string
+          is_fully_matched?: boolean | null
+          matched_amount?: number | null
+          matched_counterparty_order_id?: string | null
+          matched_rate?: number | null
+          matching_score?: number | null
+          order_id: string
+          order_type: string
+          requested_amount: number
+          requested_rate: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string | null
+          id?: string
+          is_fully_matched?: boolean | null
+          matched_amount?: number | null
+          matched_counterparty_order_id?: string | null
+          matched_rate?: number | null
+          matching_score?: number | null
+          order_id?: string
+          order_type?: string
+          requested_amount?: number
+          requested_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_orders_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_execution_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_orders_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_status_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_orders_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "signed_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batches: {
+        Row: {
+          average_matched_rate: number | null
+          batch_number: number
+          completion_timestamp: number | null
+          created_at: string | null
+          error_message: string | null
+          execution_timestamp: number | null
+          execution_tx_hash: string | null
+          id: string
+          matched_pairs: number | null
+          matching_timestamp: number | null
+          operator_address: string
+          status: Database["public"]["Enums"]["batch_status"]
+          submission_timestamp: number
+          total_borrower_orders: number | null
+          total_lender_orders: number | null
+          total_volume: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_matched_rate?: number | null
+          batch_number: number
+          completion_timestamp?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_timestamp?: number | null
+          execution_tx_hash?: string | null
+          id?: string
+          matched_pairs?: number | null
+          matching_timestamp?: number | null
+          operator_address: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          submission_timestamp: number
+          total_borrower_orders?: number | null
+          total_lender_orders?: number | null
+          total_volume?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_matched_rate?: number | null
+          batch_number?: number
+          completion_timestamp?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_timestamp?: number | null
+          execution_tx_hash?: string | null
+          id?: string
+          matched_pairs?: number | null
+          matching_timestamp?: number | null
+          operator_address?: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          submission_timestamp?: number
+          total_borrower_orders?: number | null
+          total_lender_orders?: number | null
+          total_volume?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      borrower_orders: {
+        Row: {
+          avs_status: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp: number | null
+          avs_submission_tx_hash: string | null
+          borrower: string
+          collateral_amount: number
+          created_at: string | null
+          created_loan_id: string | null
+          current_batch_id: string | null
+          expiry: number
+          id: string
+          matched_amount: number | null
+          matched_rate: number | null
+          maturity_timestamp: number
+          max_interest_rate_bips: number
+          max_principal: number
+          min_principal: number
+          principal_amount: number
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avs_status?: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp?: number | null
+          avs_submission_tx_hash?: string | null
+          borrower: string
+          collateral_amount: number
+          created_at?: string | null
+          created_loan_id?: string | null
+          current_batch_id?: string | null
+          expiry: number
+          id?: string
+          matched_amount?: number | null
+          matched_rate?: number | null
+          maturity_timestamp: number
+          max_interest_rate_bips: number
+          max_principal: number
+          min_principal: number
+          principal_amount: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avs_status?: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp?: number | null
+          avs_submission_tx_hash?: string | null
+          borrower?: string
+          collateral_amount?: number
+          created_at?: string | null
+          created_loan_id?: string | null
+          current_batch_id?: string | null
+          expiry?: number
+          id?: string
+          matched_amount?: number | null
+          matched_rate?: number | null
+          maturity_timestamp?: number
+          max_interest_rate_bips?: number
+          max_principal?: number
+          min_principal?: number
+          principal_amount?: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "borrower_orders_created_loan_id_fkey"
+            columns: ["created_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "borrower_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_execution_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "borrower_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_status_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "borrower_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loans: {
         Row: {
           borrower: string
@@ -136,70 +365,249 @@ export type Database = {
       }
       signed_orders: {
         Row: {
+          avs_status: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp: number | null
+          avs_submission_tx_hash: string | null
           borrower: string | null
           collateral_amount: string
           collateral_token: string
           created_at: string | null
+          current_batch_id: string | null
           duration: number
           expiry: number
           id: string
+          interest_rate_bips: number | null
+          is_partially_filled: boolean | null
+          last_batch_id: string | null
           lender: string
           loan_amount: string
           loan_token: string
+          matched_amount: number | null
+          matched_rate: number | null
+          maturity_timestamp: number | null
+          max_principal: number | null
+          max_rate: number | null
+          min_principal: number | null
+          min_rate: number | null
           nonce: number
           order_hash: string
+          partial_fill_amount: number | null
           rate_per_second: string
           signature: Json
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          avs_status?: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp?: number | null
+          avs_submission_tx_hash?: string | null
           borrower?: string | null
           collateral_amount: string
           collateral_token: string
           created_at?: string | null
+          current_batch_id?: string | null
           duration: number
           expiry: number
           id?: string
+          interest_rate_bips?: number | null
+          is_partially_filled?: boolean | null
+          last_batch_id?: string | null
           lender: string
           loan_amount: string
           loan_token: string
+          matched_amount?: number | null
+          matched_rate?: number | null
+          maturity_timestamp?: number | null
+          max_principal?: number | null
+          max_rate?: number | null
+          min_principal?: number | null
+          min_rate?: number | null
           nonce: number
           order_hash: string
+          partial_fill_amount?: number | null
           rate_per_second: string
           signature: Json
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          avs_status?: Database["public"]["Enums"]["avs_status"] | null
+          avs_submission_timestamp?: number | null
+          avs_submission_tx_hash?: string | null
           borrower?: string | null
           collateral_amount?: string
           collateral_token?: string
           created_at?: string | null
+          current_batch_id?: string | null
           duration?: number
           expiry?: number
           id?: string
+          interest_rate_bips?: number | null
+          is_partially_filled?: boolean | null
+          last_batch_id?: string | null
           lender?: string
           loan_amount?: string
           loan_token?: string
+          matched_amount?: number | null
+          matched_rate?: number | null
+          maturity_timestamp?: number | null
+          max_principal?: number | null
+          max_rate?: number | null
+          min_principal?: number | null
+          min_rate?: number | null
           nonce?: number
           order_hash?: string
+          partial_fill_amount?: number | null
           rate_per_second?: string
           signature?: Json
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "signed_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_execution_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_status_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_orders_current_batch_id_fkey"
+            columns: ["current_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_orders_last_batch_id_fkey"
+            columns: ["last_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_execution_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_orders_last_batch_id_fkey"
+            columns: ["last_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_status_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_orders_last_batch_id_fkey"
+            columns: ["last_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      batch_execution_history: {
+        Row: {
+          average_matched_rate: number | null
+          avg_rate_improvement_percent: number | null
+          batch_number: number | null
+          borrower_orders: number | null
+          completion_timestamp: number | null
+          execution_timestamp: number | null
+          execution_tx_hash: string | null
+          id: string | null
+          lender_orders: number | null
+          matched_pairs: number | null
+          operator_address: string | null
+          status: Database["public"]["Enums"]["batch_status"] | null
+          submission_timestamp: number | null
+          total_volume: number | null
+        }
+        Relationships: []
+      }
+      batch_status_summary: {
+        Row: {
+          actual_matched_volume: number | null
+          average_matched_rate: number | null
+          batch_number: number | null
+          fully_matched_orders: number | null
+          id: string | null
+          matched_pairs: number | null
+          status: Database["public"]["Enums"]["batch_status"] | null
+          submission_timestamp: number | null
+          total_borrower_orders: number | null
+          total_lender_orders: number | null
+          total_orders: number | null
+          total_volume: number | null
+        }
+        Relationships: []
+      }
+      market_depth: {
+        Row: {
+          order_count: number | null
+          rate: number | null
+          side: string | null
+          volume: number | null
+        }
+        Relationships: []
+      }
+      user_batch_statistics: {
+        Row: {
+          avg_savings_percent: number | null
+          fully_matched_orders: number | null
+          total_batches: number | null
+          total_orders: number | null
+          total_volume: number | null
+          user_address: string | null
+        }
+        Relationships: []
+      }
+      user_pending_batch_orders: {
+        Row: {
+          avs_status: Database["public"]["Enums"]["avs_status"] | null
+          batch_number: number | null
+          batch_status: Database["public"]["Enums"]["batch_status"] | null
+          batch_submission_time: number | null
+          borrower: string | null
+          collateral_amount: number | null
+          current_batch_id: string | null
+          interest_rate_bips: number | null
+          is_fully_matched: boolean | null
+          lender: string | null
+          loan_amount: number | null
+          matched_amount: number | null
+          matched_rate: number | null
+          maturity_timestamp: number | null
+          order_id: string | null
+          order_type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      refresh_user_batch_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      avs_status:
+        | "none"
+        | "submitted"
+        | "pending_match"
+        | "matched"
+        | "executed"
+        | "failed"
+      batch_status:
+        | "collecting"
+        | "matching"
+        | "executing"
+        | "completed"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -314,6 +722,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      avs_status: [
+        "none",
+        "submitted",
+        "pending_match",
+        "matched",
+        "executed",
+        "failed",
+      ],
+      batch_status: [
+        "collecting",
+        "matching",
+        "executing",
+        "completed",
+        "failed",
+      ],
+    },
   },
 } as const

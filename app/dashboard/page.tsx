@@ -36,6 +36,7 @@ import { supabase } from "@/lib/supabase"
 import { usePrivyWallet } from "@/hooks/use-privy-wallet"
 import { PositionsTab } from "@/components/dashboard/PositionsTab"
 import { TimeDisplay } from "@/components/dashboard/TimeDisplay"
+import { BatchHistoryTab } from "@/components/dashboard/BatchHistoryTab"
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("orders")
@@ -199,9 +200,10 @@ export default function DashboardPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6 md:mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-6 md:mb-8">
             <TabsTrigger value="orders">Active Orders</TabsTrigger>
             <TabsTrigger value="positions">Positions</TabsTrigger>
+            <TabsTrigger value="batch">Batch History</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -364,6 +366,10 @@ export default function DashboardPage() {
               isRepaying={isRepaying}
               isLiquidating={isLiquidating}
             />
+          </TabsContent>
+
+          <TabsContent value="batch" className="space-y-6">
+            <BatchHistoryTab />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">

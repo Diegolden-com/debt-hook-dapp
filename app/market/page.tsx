@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/layout/header"
 import { EthPriceDisplay } from "@/components/eth-price-display"
-import { OrderBook } from "@/components/order-book"
-import { TradingPanel } from "@/components/trading-panel"
+import { EnhancedOrderBook } from "@/components/enhanced-order-book"
+import { EnhancedTradingPanel } from "@/components/trading-panel-enhanced"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -123,14 +123,23 @@ export default function MarketPage() {
             </div>
 
             <div className="grid lg:grid-cols-4 gap-6">
-              {/* Integrated Order Book with Chart */}
+              {/* Integrated Order Book with Chart and Batch Support */}
               <div className="lg:col-span-3">
-                <OrderBook onOrderSelect={setSelectedOffer} />
+                <EnhancedOrderBook 
+                  onOrderSelect={(order) => {
+                    if (order.batchInfo) {
+                      // Handle batch order
+                      console.log("Batch order selected:", order.batchInfo.avsStatus)
+                      toast.info(`This order is part of batch #${order.batchInfo.batchNumber}`)
+                    }
+                    setSelectedOffer(order)
+                  }} 
+                />
               </div>
 
               {/* Unified Trading Panel */}
               <div>
-                <TradingPanel
+                <EnhancedTradingPanel
                   bestBid={bestBid}
                   bestAsk={bestAsk}
                   onCreateOrder={handleCreateOrder}
