@@ -57,7 +57,7 @@ export async function createUSDCPermit(
   const domain = {
     name: 'USD Coin',
     version: '2',
-    chainId: walletClient.chain?.id || 84532, // Default to Base Sepolia
+    chainId: walletClient.chain?.id || 1301, // Default to Unichain Sepolia
     verifyingContract: PAYMASTER_CONFIG.usdcAddress
   }
 

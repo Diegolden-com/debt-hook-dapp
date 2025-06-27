@@ -1,12 +1,12 @@
 import { DebtHookABI, DebtOrderBookABI, ERC20ABI } from './index'
 import { Address } from 'viem'
-import { baseSepolia, localhost } from 'viem/chains'
+import { localhost, unichainSepolia } from 'viem/chains'
 
-export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '84532')
-export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.base.org'
+export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1301')
+export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.unichain.org'
 
 // Use localhost chain for local development
-export const chain = CHAIN_ID === 31337 ? localhost : baseSepolia
+export const chain = CHAIN_ID === 31337 ? localhost : unichainSepolia
 
 export const contracts = {
   debtHook: {

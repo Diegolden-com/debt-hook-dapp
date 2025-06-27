@@ -25,17 +25,17 @@ export default function PrivyProvider({ children }: { children: React.ReactNode 
             theme: "light",
           },
           loginMethods: ["email", "wallet", "google", "twitter", "discord"],
-          // Network configuration for Base Sepolia
+          // Network configuration for Unichain Sepolia
           defaultChain: {
-            id: 84532,
-            name: "Base Sepolia",
-            network: "base-sepolia",
+            id: 1301,
+            name: "Unichain Sepolia",
+            network: "unichain-sepolia",
             rpcUrls: {
-              default: { http: ["https://sepolia.base.org"] },
-              public: { http: ["https://sepolia.base.org"] },
+              default: { http: ["https://sepolia.unichain.org"] },
+              public: { http: ["https://sepolia.unichain.org"] },
             },
             blockExplorers: {
-              default: { name: "BaseScan", url: "https://sepolia.basescan.org" },
+              default: { name: "Uniscan", url: "https://sepolia.uniscan.xyz" },
             },
             nativeCurrency: {
               decimals: 18,

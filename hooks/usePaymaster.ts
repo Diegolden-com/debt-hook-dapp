@@ -7,7 +7,7 @@ import {
   createPublicClient,
   http
 } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { unichainSepolia } from 'viem/chains'
 import { toast } from 'sonner'
 import { 
   preparePaymasterData,
@@ -25,7 +25,7 @@ export function usePaymaster() {
   const [usdcBalance, setUsdcBalance] = useState<bigint | null>(null)
   
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: unichainSepolia,
     transport: http()
   })
   

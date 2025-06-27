@@ -3,7 +3,7 @@
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useEffect, useState } from 'react';
 import { createWalletClient, custom, type WalletClient } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { unichainSepolia } from 'viem/chains';
 
 export function usePrivyWallet() {
   const { ready, authenticated, user } = usePrivy();
@@ -29,7 +29,7 @@ export function usePrivyWallet() {
         // Create a viem wallet client
         const client = createWalletClient({
           account: wallet.address as `0x${string}`,
-          chain: baseSepolia,
+          chain: unichainSepolia,
           transport: custom(provider),
         });
 
