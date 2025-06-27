@@ -26,6 +26,25 @@ export default function PrivyProvider({ children }: { children: React.ReactNode 
           },
           loginMethods: ["email", "wallet", "google", "twitter", "discord"],
           // Network configuration for Unichain Sepolia
+          supportedChains: [
+            {
+              id: 1301,
+              name: "Unichain Sepolia",
+              network: "unichain-sepolia",
+              rpcUrls: {
+                default: { http: ["https://sepolia.unichain.org"] },
+                public: { http: ["https://sepolia.unichain.org"] },
+              },
+              blockExplorers: {
+                default: { name: "Uniscan", url: "https://sepolia.uniscan.xyz" },
+              },
+              nativeCurrency: {
+                decimals: 18,
+                name: "Ethereum",
+                symbol: "ETH",
+              },
+            }
+          ],
           defaultChain: {
             id: 1301,
             name: "Unichain Sepolia",
